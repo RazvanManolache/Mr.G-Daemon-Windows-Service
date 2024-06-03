@@ -1,0 +1,8 @@
+{
+    "checkDisksInterval": 60,
+    "checkSubApplicationsInterval": 10,
+    "checkSubApplicationsUpdateInterval": 1440,
+    "dataFolder" : "Data",
+    "logFolder" : "Logs",
+    "applicationFolder" : "Applications"
+}

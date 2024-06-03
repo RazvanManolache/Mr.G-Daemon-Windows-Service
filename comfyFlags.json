@@ -1,0 +1,464 @@
+{
+    "flags":{
+        "listen": {
+            "help": "Specify the IP address to listen on (default: 127.0.0.1). If --listen is provided without an argument, it defaults to 0.0.0.0. (listens on all)",
+            "default": "127.0.0.1",
+            "nargs": "?",
+            "const": "0.0.0.0",
+            "type": "str",
+            "group": null,
+            "argument": "--listen",
+            "metavar": "IP"
+        },
+        "port": {
+            "help": "Set the listen port.",
+            "default": 8188,
+            "nargs": null,
+            "type": "int",
+            "group": null,
+            "argument": "--port",
+            "metavar": null
+        },
+        "enable-cors-header": {
+            "help": "Enable CORS (Cross-Origin Resource Sharing) with optional origin or allow all with default '*'.",
+            "default": null,
+            "nargs": "?",
+            "const": "*",
+            "type": "str",
+            "group": null,
+            "argument": "--enable-cors-header",
+            "metavar": "ORIGIN"
+        },
+        "max-upload-size": {
+            "help": "Set the maximum upload size in MB.",
+            "default": 100,
+            "nargs": null,
+            "type": "float",
+            "group": null,
+            "argument": "--max-upload-size",
+            "metavar": null
+        },
+        "extra-model-paths-config": {
+            "help": "Load one or more extra_model_paths.yaml files.",
+            "default": null,
+            "nargs": "+",
+            "type": "str",
+            "group": null,
+            "argument": "--extra-model-paths-config",
+            "metavar": "PATH"
+        },
+        "output-directory": {
+            "help": "Set the ComfyUI output directory.",
+            "default": null,
+            "nargs": null,
+            "type": "str",
+            "group": null,
+            "argument": "--output-directory",
+            "metavar": null
+        },
+        "temp-directory": {
+            "help": "Set the ComfyUI temp directory (default is in the ComfyUI directory).",
+            "default": null,
+            "nargs": null,
+            "type": "str",
+            "group": null,
+            "argument": "--temp-directory",
+            "metavar": null
+        },
+        "input-directory": {
+            "help": "Set the ComfyUI input directory.",
+            "default": null,
+            "nargs": null,
+            "type": "str",
+            "group": null,
+            "argument": "--input-directory",
+            "metavar": null
+        },
+        "auto-launch": {
+            "help": "Automatically launch ComfyUI in the default browser.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--auto-launch",
+            "metavar": null
+        },
+        "disable-auto-launch": {
+            "help": "Disable auto launching the browser.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--disable-auto-launch",
+            "metavar": null
+        },
+        "cuda-device": {
+            "help": "Set the id of the cuda device this instance will use.",
+            "default": null,
+            "nargs": null,
+            "type": "int",
+            "group": null,
+            "argument": "--cuda-device",
+            "metavar": "DEVICE_ID"
+        },
+        "cuda-malloc": {
+            "help": "Enable cudaMallocAsync (enabled by default for torch 2.0 and up).",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "cm_group",
+            "argument": "--cuda-malloc",
+            "metavar": null
+        },
+        "disable-cuda-malloc": {
+            "help": "Disable cudaMallocAsync.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "cm_group",
+            "argument": "--disable-cuda-malloc",
+            "metavar": null
+        },
+        "dont-upcast-attention": {
+            "help": "Disable upcasting of attention. Can boost speed but increase the chances of black images.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--dont-upcast-attention",
+            "metavar": null
+        },
+        "force-fp32": {
+            "help": "Force fp32 (If this makes your GPU work better please report it).",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fp_group",
+            "argument": "--force-fp32",
+            "metavar": null
+        },
+        "force-fp16": {
+            "help": "Force fp16.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fp_group",
+            "argument": "--force-fp16",
+            "metavar": null
+        },
+        "bf16-unet": {
+            "help": "Run the UNET in bf16. This should only be used for testing stuff.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fpunet_group",
+            "argument": "--bf16-unet",
+            "metavar": null
+        },
+        "fp16-unet": {
+            "help": "Store unet weights in fp16.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fpunet_group",
+            "argument": "--fp16-unet",
+            "metavar": null
+        },
+        "fp8_e4m3fn-unet": {
+            "help": "Store unet weights in fp8_e4m3fn.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fpunet_group",
+            "argument": "--fp8_e4m3fn-unet",
+            "metavar": null
+        },
+        "fp8_e5m2-unet": {
+            "help": "Store unet weights in fp8_e5m2.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fpunet_group",
+            "argument": "--fp8_e5m2-unet",
+            "metavar": null
+        },
+        "fp16-vae": {
+            "help": "Run the VAE in fp16, might cause black images.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fpvae_group",
+            "argument": "--fp16-vae",
+            "metavar": null
+        },
+        "fp32-vae": {
+            "help": "Run the VAE in full precision fp32.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fpvae_group",
+            "argument": "--fp32-vae",
+            "metavar": null
+        },
+        "bf16-vae": {
+            "help": "Run the VAE in bf16.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fpvae_group",
+            "argument": "--bf16-vae",
+            "metavar": null
+        },
+        "cpu-vae": {
+            "help": "Run the VAE on the CPU.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--cpu-vae",
+            "metavar": null
+        },
+        "fp8_e4m3fn-text-enc": {
+            "help": "Store text encoder weights in fp8 (e4m3fn variant).",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fpte_group",
+            "argument": "--fp8_e4m3fn-text-enc",
+            "metavar": null
+        },
+        "fp8_e5m2-text-enc": {
+            "help": "Store text encoder weights in fp8 (e5m2 variant).",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fpte_group",
+            "argument": "--fp8_e5m2-text-enc",
+            "metavar": null
+        },
+        "fp16-text-enc": {
+            "help": "Store text encoder weights in fp16.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fpte_group",
+            "argument": "--fp16-text-enc",
+            "metavar": null
+        },
+        "fp32-text-enc": {
+            "help": "Store text encoder weights in fp32.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "fpte_group",
+            "argument": "--fp32-text-enc",
+            "metavar": null
+        },
+        "directml": {
+            "help": "Use torch-directml.",
+            "default": null,
+            "nargs": "?",
+            "const": -1,
+            "type": "int",
+            "group": null,
+            "argument": "--directml",
+            "metavar": "DIRECTML_DEVICE"
+        },
+        "disable-ipex-optimize": {
+            "help": "Disables ipex.optimize when loading models with Intel GPUs.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--disable-ipex-optimize",
+            "metavar": null
+        },
+        "preview-method": {
+            "help": "Default preview method for sampler nodes.",
+            "default": "NoPreviews",
+            "nargs": null,
+            "type": "LatentPreviewMethod",
+            "group": null,
+            "argument": "--preview-method",
+            "metavar": null
+        },
+        "use-split-cross-attention": {
+            "help": "Use the split cross attention optimization. Ignored when xformers is used.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--use-split-cross-attention",
+            "metavar": null
+        },
+        "use-quad-cross-attention": {
+            "help": "Use the sub-quadratic cross attention optimization . Ignored when xformers is used.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--use-quad-cross-attention",
+            "metavar": null
+        },
+        "use-pytorch-cross-attention": {
+            "help": "Use the new pytorch 2.0 cross attention function.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--use-pytorch-cross-attention",
+            "metavar": null
+        },
+        "disable-xformers": {
+            "help": "Disable xformers.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--disable-xformers",
+            "metavar": null
+        },
+        "gpu-only": {
+            "help": "Store and run everything (text encoders/CLIP models, etc... on the GPU).",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "vram_group",
+            "argument": "--gpu-only",
+            "metavar": null
+        },
+        "highvram": {
+            "help": "By default models will be unloaded to CPU memory after being used. This option keeps them in GPU memory.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "vram_group",
+            "argument": "--highvram",
+            "metavar": null
+        },
+        "normalvram": {
+            "help": "Used to force normal vram use if lowvram gets automatically enabled.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "vram_group",
+            "argument": "--normalvram",
+            "metavar": null
+        },
+        "lowvram": {
+            "help": "Split the unet in parts to use less vram.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "vram_group",
+            "argument": "--lowvram",
+            "metavar": null
+        },
+        "novram": {
+            "help": "When lowvram isn't enough.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "vram_group",
+            "argument": "--novram",
+            "metavar": null
+        },
+        "cpu": {
+            "help": "To use the CPU for everything (slow).",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": "vram_group",
+            "argument": "--cpu",
+            "metavar": null
+        },
+        "disable-smart-memory": {
+            "help": "Force ComfyUI to agressively offload to regular ram instead of keeping models in vram when it can.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--disable-smart-memory",
+            "metavar": null
+        },
+        "deterministic": {
+            "help": "Make pytorch use slower deterministic algorithms when it can. Note that this might not make images deterministic in all cases.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--deterministic",
+            "metavar": null
+        },
+        "dont-print-server": {
+            "help": "Don't print server output.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--dont-print-server",
+            "metavar": null
+        },
+        "quick-test-for-ci": {
+            "help": "Quick test for CI.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--quick-test-for-ci",
+            "metavar": null
+        },
+        "windows-standalone-build": {
+            "help": "Windows standalone build: Enable convenient things that most people using the standalone windows build will probably enjoy (like auto opening the page on startup).",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--windows-standalone-build",
+            "metavar": null
+        },
+        "disable-metadata": {
+            "help": "Disable saving prompt metadata in files.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--disable-metadata",
+            "metavar": null
+        },
+        "multi-user": {
+            "help": "Enables per-user storage.",
+            "default": false,
+            "nargs": null,
+            "type": "bool",
+            "group": null,
+            "argument": "--multi-user",
+            "metavar": null
+        }
+    
+    
+       
+    
+    },
+    "groups": {
+        "cm_group": {
+            "description": "CUDA malloc group."
+        },
+        "fp_group": {
+            "description": "Floating point group."
+        },
+        "fpunet_group": {
+            "description": "Floating point unet group."
+        },
+        "fpvae_group": {
+            "description": "Floating point vae group."
+        },
+        "fpte_group": {
+            "description": "Floating point text encoder group."
+        },
+        "vram_group": {
+            "description": "VRAM group."
+        }
+    }
+}
+    

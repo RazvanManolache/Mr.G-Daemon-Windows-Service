@@ -1,0 +1,48 @@
+[
+    {
+        "id": "19385028-8bd1-4a1e-bd95-43d9cb6d7db0",
+        "name": "Mr.G Comfy UI",
+        "commandExec": ".\\python_embeded\\python.exe",
+        "command": " -s .\\ComfyUI\\main.py",
+        "restartOnCriticalError": false,
+        "criticalErrorMessages": [
+            "CUDA error: unspecified launch failure",
+            "TORCH_USE_CUDA_DSA",
+            "CUDA_LAUNCH_BLOCKING"
+        ],
+        "autoStart": true,
+        "repoURL": "https://github.com/RazvanManolache/Mr.G-Kit-ComfyUI",
+        "branch": "main",
+        "path": "MrG.Comfy.UI",
+        "autoUpdate": true,
+        "flags": [
+            "--cpu",
+            "--windows-standalone-build",
+            "--enable-cors-header"
+        ],
+        "appType": "mrg",
+        "firstRun": false,
+        "installed": true,
+        "hasUpdates": false,
+        "logLocation": "",
+        "running": false,
+        "status": "Starting",
+        "symLinks": {
+            "ComfyUI\\models\\checkpoints": "StableDiffusion\\Checkpoints",
+            "ComfyUI\\models\\clip": "StableDiffusion\\Clip",
+            "ComfyUI\\models\\clip_vision": "StableDiffusion\\ClipVision",
+            "ComfyUI\\models\\configs": "StableDiffusion\\Configs",
+            "ComfyUI\\models\\controlnet": "StableDiffusion\\ControlNet",
+            "ComfyUI\\models\\diffusers": "StableDiffusion\\Diffusers",
+            "ComfyUI\\models\\embeddings": "StableDiffusion\\Embeddings",
+            "ComfyUI\\models\\gligen": "StableDiffusion\\Gligen",
+            "ComfyUI\\models\\hypernetworks": "StableDiffusion\\Hypernetworks",
+            "ComfyUI\\models\\loras": "StableDiffusion\\LoRa",
+            "ComfyUI\\models\\style_models": "StableDiffusion\\StyleModels",
+            "ComfyUI\\models\\unet": "StableDiffusion\\UNet",
+            "ComfyUI\\models\\upscale_models": "StableDiffusion\\UpscaleModels",
+            "ComfyUI\\models\\vae": "StableDiffusion\\Vae",
+            "ComfyUI\\models\\vae_approx": "StableDiffusion\\VaeApprox"
+        }
+    }
+]

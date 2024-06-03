@@ -1,0 +1,6 @@
+*.log
+*.exe*
+Data/*
+Logs/*
+Applications/*
+
