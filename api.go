@@ -53,10 +53,17 @@ func startServer() {
 	http.HandleFunc("/status", apiStatus)
 	http.HandleFunc("/app", applicationOperation)
 	http.HandleFunc("/applications", listApplications)
+	http.HandleFunc("/kits", listKits)
 	http.HandleFunc("/ws", wsHandler)
 
 	go broadcastMessages()
 	http.ListenAndServe(":8187", nil)
+
+}
+
+func listKits(w http.ResponseWriter, r *http.Request) {
+	obj := getAllKits()
+	handleJsonAndError(w, obj, nil)
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -122,6 +129,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			listApplicationsInternal()
 		case "status":
 			apiStatusInternal()
+		case "kits":
+			getAllKits()
 
 		}
 

@@ -3,7 +3,7 @@
         "id": "19385028-8bd1-4a1e-bd95-43d9cb6d7db0",
         "name": "Mr.G Comfy UI",
         "commandExec": ".\\python_embeded\\python.exe",
-        "command": " -s .\\ComfyUI\\main.py",
+        "command": " -s .\\Mr.G-ComfyUI\\main.py",
         "restartOnCriticalError": false,
         "criticalErrorMessages": [
             "CUDA error: unspecified launch failure",
@@ -11,7 +11,7 @@
             "CUDA_LAUNCH_BLOCKING"
         ],
         "autoStart": true,
-        "repoURL": "https://github.com/RazvanManolache/Mr.G-Kit-ComfyUI",
+        "repoURL": "https://github.com/RazvanManolache/Mr.G-Kit-Mr.G.AI",
         "branch": "main",
         "path": "MrG.Comfy.UI",
         "autoUpdate": true,
@@ -25,24 +25,25 @@
         "installed": true,
         "hasUpdates": false,
         "logLocation": "",
+        "setupCommand": "./python_embeded/python.exe -s -m pip install --upgrade torch torchvision torchaudio  --extra-index-url https://download.pytorch.org/whl/cu121 -r ./Mr.G-ComfyUI/requirements.txt pygit2",
         "running": false,
         "status": "Starting",
         "symLinks": {
-            "ComfyUI\\models\\checkpoints": "StableDiffusion\\Checkpoints",
-            "ComfyUI\\models\\clip": "StableDiffusion\\Clip",
-            "ComfyUI\\models\\clip_vision": "StableDiffusion\\ClipVision",
-            "ComfyUI\\models\\configs": "StableDiffusion\\Configs",
-            "ComfyUI\\models\\controlnet": "StableDiffusion\\ControlNet",
-            "ComfyUI\\models\\diffusers": "StableDiffusion\\Diffusers",
-            "ComfyUI\\models\\embeddings": "StableDiffusion\\Embeddings",
-            "ComfyUI\\models\\gligen": "StableDiffusion\\Gligen",
-            "ComfyUI\\models\\hypernetworks": "StableDiffusion\\Hypernetworks",
-            "ComfyUI\\models\\loras": "StableDiffusion\\LoRa",
-            "ComfyUI\\models\\style_models": "StableDiffusion\\StyleModels",
-            "ComfyUI\\models\\unet": "StableDiffusion\\UNet",
-            "ComfyUI\\models\\upscale_models": "StableDiffusion\\UpscaleModels",
-            "ComfyUI\\models\\vae": "StableDiffusion\\Vae",
-            "ComfyUI\\models\\vae_approx": "StableDiffusion\\VaeApprox"
+            "Mr.G-ComfyUI\\models\\checkpoints": "StableDiffusion\\Checkpoints",
+            "Mr.G-ComfyUI\\models\\clip": "StableDiffusion\\Clip",
+            "Mr.G-ComfyUI\\models\\clip_vision": "StableDiffusion\\ClipVision",
+            "Mr.G-ComfyUI\\models\\configs": "StableDiffusion\\Configs",
+            "Mr.G-ComfyUI\\models\\controlnet": "StableDiffusion\\ControlNet",
+            "Mr.G-ComfyUI\\models\\diffusers": "StableDiffusion\\Diffusers",
+            "Mr.G-ComfyUI\\models\\embeddings": "StableDiffusion\\Embeddings",
+            "Mr.G-ComfyUI\\models\\gligen": "StableDiffusion\\Gligen",
+            "Mr.G-ComfyUI\\models\\hypernetworks": "StableDiffusion\\Hypernetworks",
+            "Mr.G-ComfyUI\\models\\loras": "StableDiffusion\\LoRa",
+            "Mr.G-ComfyUI\\models\\style_models": "StableDiffusion\\StyleModels",
+            "Mr.G-ComfyUI\\models\\unet": "StableDiffusion\\UNet",
+            "Mr.G-ComfyUI\\models\\upscale_models": "StableDiffusion\\UpscaleModels",
+            "Mr.G-ComfyUI\\models\\vae": "StableDiffusion\\Vae",
+            "Mr.G-ComfyUI\\models\\vae_approx": "StableDiffusion\\VaeApprox"
         }
     }
 ]

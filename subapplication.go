@@ -33,6 +33,7 @@ type SubApplication struct {
 	Installed              bool               `json:"installed"`              // Indicates if the application is installed
 	HasUpdates             bool               `json:"hasUpdates"`             // Indicates if the application has updates
 	LogLocation            string             `json:"logLocation"`            // Location of the log files
+	SetupCommand           string             `json:"setupCommand"`           // Command to run after installation
 	LogFile                *os.File           `json:"-"`                      // Log file for the subprocess, don't serialize
 	Context                context.Context    `json:"-"`                      // Process object for the subprocess
 	Cmd                    *exec.Cmd          `json:"-"`                      // Process object for the subprocess
@@ -151,13 +152,49 @@ func calculateFlags(subApp *SubApplication) {
 	}
 }
 
+func runSetupCommand(subApp *SubApplication) error {
+	if subApp.SetupCommand == "" {
+		return nil
+	}
+	fullPath, err := getInstallLocation(subApp)
+	if err != nil {
+		logToFile("log", fmt.Sprintf("Failed to get install location for subapplication %s: %v", subApp.Name, err), subApp)
+		return err
+	}
+	command := subApp.SetupCommand
+	if strings.Contains(command, "$dir") {
+		installLoc, err := getInstallLocation(subApp)
+		if err != nil {
+			logToMainFile(fmt.Sprintf("Failed to get install location for subapplication %s: %v", subApp.Name, err))
+			return err
+		}
+		command = strings.Replace(command, "$dir", installLoc, -1)
+	}
+	commandParams := strings.Split(command, " ")
+	command = commandParams[0]
+
+	joinedRest := strings.Join(commandParams[1:], " ")
+
+	ctx, _ := context.WithCancel(context.Background())
+	cmd := exec.CommandContext(ctx, command)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CmdLine: joinedRest}
+	cmd.Dir = fullPath
+	err = cmd.Run()
+	if err != nil {
+		logToMainFile(fmt.Sprintf("Failed to run setup command for subapplication %s: %v", subApp.Name, err))
+		return err
+	}
+	return nil
+}
+
 func startSubApplication(subAppDef *SubApplication) {
 	subApp := getCurrentSubApplication(subAppDef)
+
 	if subApp.AutoUpdate {
 		updateSubApplication(subApp)
 	}
 	updateStatusSubApplication(subApp, "Starting")
-
+	runSetupCommand(subApp)
 	if subApp.FirstRun {
 		calculateFlags(subApp)
 		subApp.FirstRun = false

@@ -16,6 +16,7 @@ func makeError(msg string, err error) error {
 func apiStatusInternal() (*DeamonStatus, error) {
 	defer broadcastToSocket("config", CurrentConfig)
 	defer broadcastToSocket("subapplications", subApplications)
+	go getAllKits()
 	state := DeamonStatus{Name: appName, Config: CurrentConfig, SubApplications: subApplications}
 
 	return &state, nil

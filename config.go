@@ -9,15 +9,18 @@ import (
 
 var configFile = "config.json"
 
+var mainAppKitRepository = "https://github.com/RazvanManolache/Mr.G-Daemon-Kits-List"
+
 var CurrentConfig Config
 
 type Config struct {
-	CheckDisksInterval                 int    `json:"checkDisksInterval"`
-	CheckSubApplicationsInterval       int    `json:"checkSubApplicationsInterval"`
-	CheckSubApplicationsUpdateInterval int    `json:"checkSubApplicationsUpdateInterval"`
-	ApplicationFolder                  string `json:"applicationFolder"`
-	LogFolder                          string `json:"logFolder"`
-	DataFolder                         string `json:"dataFolder"`
+	CheckDisksInterval                 int      `json:"checkDisksInterval"`
+	CheckSubApplicationsInterval       int      `json:"checkSubApplicationsInterval"`
+	CheckSubApplicationsUpdateInterval int      `json:"checkSubApplicationsUpdateInterval"`
+	ApplicationFolder                  string   `json:"applicationFolder"`
+	LogFolder                          string   `json:"logFolder"`
+	DataFolder                         string   `json:"dataFolder"`
+	AppKitRepositories                 []string `json:"appKitRepositories"`
 }
 
 func readConfigFile() Config {
