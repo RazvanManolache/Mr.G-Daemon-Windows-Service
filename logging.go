@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-var mainLogfile *os.File
-
 type LogEvent struct {
 	Message string `json:"message"`
 	AppId   string `json:"appId"`
@@ -59,8 +57,6 @@ func logToFile(logType string, message string, subApp *SubApplication, logFlags 
 				if subApp.LogLocation == "" {
 					return
 				}
-			} else {
-
 			}
 			msg := logMessage(location, app, logType, message)
 			if logType != "log" {

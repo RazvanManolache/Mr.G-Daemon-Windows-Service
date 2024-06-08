@@ -15,6 +15,7 @@ func main() {
 	go startServer()
 	go scheduler()
 	detectGPU()
+	detectGPU_Windows()
 	runApplication()
 
 	c := make(chan os.Signal, 1)

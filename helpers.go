@@ -34,12 +34,12 @@ func getCurrentPath() (string, error) {
 	return exPath, nil
 }
 
-func getFolderWithCreate(folder string, subfolders ...string) (string, error, int) {
+func getFolderWithCreate(folder string, subfolders ...string) (string, int, error) {
 	_, err := os.Stat(folder)
 	if os.IsNotExist(err) {
 		err = os.MkdirAll(folder, os.ModePerm)
 		if err != nil {
-			return "", err, -1
+			return "", -1, err
 		}
 	}
 	var i int = 0
@@ -49,12 +49,12 @@ func getFolderWithCreate(folder string, subfolders ...string) (string, error, in
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(folder, os.ModePerm)
 			if err != nil {
-				return folder, err, i
+				return folder, i, err
 			}
 		}
 		i++
 	}
-	return folder, nil, i
+	return folder, i, nil
 }
 
 func createSymLink(installLoc string, source string, destination string) {
@@ -65,7 +65,7 @@ func createSymLink(installLoc string, source string, destination string) {
 	}
 	sourcePath := source
 	if !filepath.IsAbs(sourcePath) {
-		sourcePath, err, _ = getFolderWithCreate(installLoc, source)
+		sourcePath, _, err = getFolderWithCreate(installLoc, source)
 		if err != nil {
 			logToFile("log", fmt.Sprintf("Failed to get folder for source %s: %v", source, err), nil)
 			return
@@ -73,7 +73,7 @@ func createSymLink(installLoc string, source string, destination string) {
 	}
 	destinationPath := destination
 	if !filepath.IsAbs(destinationPath) {
-		destinationPath, err, _ = getFolderWithCreate(dataloc, destination)
+		destinationPath, _, err = getFolderWithCreate(dataloc, destination)
 		if err != nil {
 			logToFile("log", fmt.Sprintf("Failed to create destination folder for subapplication %s: %v", source, err), nil)
 			return
@@ -235,7 +235,7 @@ func getDataLocation() (string, error) {
 		writeConfigFile()
 	}
 	if filepath.IsAbs(CurrentConfig.DataFolder) {
-		folder, err, _ := getFolderWithCreate(CurrentConfig.DataFolder)
+		folder, _, err := getFolderWithCreate(CurrentConfig.DataFolder)
 		if err == nil {
 			return folder, nil
 		}
@@ -244,11 +244,11 @@ func getDataLocation() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	folder, err, _ := getFolderWithCreate(exPath, CurrentConfig.DataFolder)
+	folder, _, err := getFolderWithCreate(exPath, CurrentConfig.DataFolder)
 	if err == nil {
 		return folder, nil
 	}
-	folder, err, _ = getFolderWithCreate(exPath, "data")
+	folder, _, err = getFolderWithCreate(exPath, "data")
 	if err == nil {
 		return folder, nil
 	}
@@ -263,18 +263,18 @@ func getInstallLocation(subApp *SubApplication) (string, error) {
 	}
 	//if it's an absolute path, use it
 	if filepath.IsAbs(subApp.Path) {
-		folder, err, _ := getFolderWithCreate(subApp.Path)
+		folder, _, err := getFolderWithCreate(subApp.Path)
 		if err == nil {
 			return folder, nil
 		}
 	}
 	if filepath.IsAbs(CurrentConfig.ApplicationFolder) {
-		folder, err, cnt := getFolderWithCreate(CurrentConfig.ApplicationFolder, subApp.Path)
+		folder, cnt, err := getFolderWithCreate(CurrentConfig.ApplicationFolder, subApp.Path)
 		if err == nil {
 			return folder, nil
 		}
 		if cnt == 0 {
-			folder, err, _ := getFolderWithCreate(CurrentConfig.ApplicationFolder, subApp.Id)
+			folder, _, err := getFolderWithCreate(CurrentConfig.ApplicationFolder, subApp.Id)
 			if err == nil {
 				return folder, nil
 			}
@@ -284,7 +284,7 @@ func getInstallLocation(subApp *SubApplication) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	folder, err, cnt := getFolderWithCreate(exPath, CurrentConfig.ApplicationFolder, subApp.Path)
+	folder, cnt, err := getFolderWithCreate(exPath, CurrentConfig.ApplicationFolder, subApp.Path)
 	if err == nil {
 		return folder, nil
 	}
@@ -292,16 +292,16 @@ func getInstallLocation(subApp *SubApplication) (string, error) {
 	case -1:
 		return "", err
 	case 0:
-		appfolder, err, _ := getFolderWithCreate(exPath, "applications", subApp.Path)
+		appfolder, _, err := getFolderWithCreate(exPath, "applications", subApp.Path)
 		if err == nil {
 			return appfolder, nil
 		}
-		directappfolder, err, _ := getFolderWithCreate(exPath, subApp.Path)
+		directappfolder, _, err := getFolderWithCreate(exPath, subApp.Path)
 		if err == nil {
 			return directappfolder, nil
 		}
 	case 1:
-		appfolder, err, _ := getFolderWithCreate(exPath, CurrentConfig.ApplicationFolder, subApp.Id)
+		appfolder, _, err := getFolderWithCreate(exPath, CurrentConfig.ApplicationFolder, subApp.Id)
 		if err == nil {
 			subApp.Path = subApp.Id
 			saveSubApplications()
@@ -322,7 +322,7 @@ func getLogLocation(name string, subApp *SubApplication) (string, error) {
 
 	//if path is provided in name, use it instead, it should take precedence
 	if filepath.IsAbs(name) {
-		folder, err, _ := getFolderWithCreate(name)
+		folder, _, err := getFolderWithCreate(name)
 		if err == nil {
 			if subApp != nil && subApp.LogLocation != folder {
 				subApp.LogLocation = folder
@@ -348,7 +348,7 @@ func getLogLocation(name string, subApp *SubApplication) (string, error) {
 		return "", err
 	}
 	//create subdirectory for logs
-	folder, err, cnt := getFolderWithCreate(exPath, CurrentConfig.LogFolder, name)
+	folder, cnt, err := getFolderWithCreate(exPath, CurrentConfig.LogFolder, name)
 	if err == nil {
 		return folder, nil
 	}

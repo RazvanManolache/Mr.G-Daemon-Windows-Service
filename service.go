@@ -75,18 +75,15 @@ func (m *myService) Execute(args []string, r <-chan svc.ChangeRequest, s chan<- 
 	go m.runMainService(eventLog)
 
 loop:
-	for {
-		select {
-		case c := <-r:
-			switch c.Cmd {
-			case svc.Interrogate:
-				s <- c.CurrentStatus
-			case svc.Stop, svc.Shutdown:
-				close(m.quit)
-				break loop
-			default:
-				eventLog.Warning(1, "unexpected control request")
-			}
+	for c := range r {
+		switch c.Cmd {
+		case svc.Interrogate:
+			s <- c.CurrentStatus
+		case svc.Stop, svc.Shutdown:
+			close(m.quit)
+			break loop
+		default:
+			eventLog.Warning(1, "unexpected control request")
 		}
 	}
 
