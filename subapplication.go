@@ -162,97 +162,48 @@ func runSetupCommand(subApp *SubApplication) error {
 		return err
 	}
 	command := subApp.SetupCommand
-	if strings.Contains(command, "$dir") {
-		installLoc, err := getInstallLocation(subApp)
-		if err != nil {
-			logToMainFile(fmt.Sprintf("Failed to get install location for subapplication %s: %v", subApp.Name, err))
-			return err
-		}
-		command = strings.Replace(command, "$dir", installLoc, -1)
-	}
+	command = strings.Replace(command, "$dir", fullPath, -1)
 	commandParams := strings.Split(command, " ")
 	command = commandParams[0]
 
 	joinedRest := strings.Join(commandParams[1:], " ")
 
-	ctx, _ := context.WithCancel(context.Background())
-	cmd := exec.CommandContext(ctx, command)
+	cmd, err := createCommand(subApp, command)
+	subApp.CancelContext = nil
+	subApp.Context = nil
+	subApp.Cmd = nil
+	if err != nil {
+		logToFile("log", fmt.Sprintf("Error creating command for subapplication %s: %v", subApp.Name, err), subApp)
+		updateStatusSubApplication(subApp, "Failed")
+		return err
+	}
+
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CmdLine: joinedRest}
 	cmd.Dir = fullPath
-	err = cmd.Run()
+	logToFile("log", fmt.Sprintf("Running setup command for subapplication %s: %s", subApp.Name, command), subApp)
+	logToFile("log", fmt.Sprintf("	with params: %s", joinedRest), subApp)
+
+	err = cmd.Start()
 	if err != nil {
 		logToMainFile(fmt.Sprintf("Failed to run setup command for subapplication %s: %v", subApp.Name, err))
 		return err
 	}
+	cmd.Wait()
 	return nil
 }
 
-func startSubApplication(subAppDef *SubApplication) {
-	subApp := getCurrentSubApplication(subAppDef)
-
-	if subApp.AutoUpdate {
-		updateSubApplication(subApp)
-	}
-	updateStatusSubApplication(subApp, "Starting")
-	runSetupCommand(subApp)
-	if subApp.FirstRun {
-		calculateFlags(subApp)
-		subApp.FirstRun = false
-		saveSubApplications()
-	}
-	var err error
-	subApp.LogFile, err = os.OpenFile(fmt.Sprintf("%s.log", subApp.Name), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		logToMainFile(fmt.Sprintf("Error opening log file for %s: %v", subApp.Name, err))
-		updateStatusSubApplication(subApp, "Not started")
-		return
-	}
-	defer subApp.LogFile.Close()
-
-	if subApp.Context != nil && subApp.CancelContext != nil {
-		logToFile("log", "Subprocess is already running", subApp)
-		updateStatusSubApplication(subApp, "Running")
-		return
-	}
-
+func createCommand(subApp *SubApplication, command string) (*exec.Cmd, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	subApp.Context = ctx
+	cmd := exec.CommandContext(ctx, command)
 	subApp.CancelContext = cancel
-
-	var command = subApp.Command
-	var commandExec = subApp.CommandExec
-	if len(subApp.Flags) > 0 {
-		command = fmt.Sprintf("%s %s", command, strings.Join(subApp.Flags, " "))
-	}
-
-	fullPath, err := getInstallLocation(subApp)
-	if err != nil {
-		logToFile("log", fmt.Sprintf("Failed to get install location for subapplication %s: %v", subApp.Name, err), subApp)
-		return
-	}
-	command = strings.Replace(command, "$dir", fullPath, -1)
-	commandExec = strings.Replace(commandExec, "$dir", fullPath, -1)
-	logToMainFile(fmt.Sprintf("Starting subprocess: %s", commandExec))
-	logToMainFile(fmt.Sprintf("	with params: %s", command))
-	logToMainFile(fmt.Sprintf("	in directory: %s", fullPath))
-	cmd := exec.CommandContext(ctx, commandExec)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CmdLine: command}
-	// pid := os.Getpid()
-	// handle, err := syscall.OpenProcess(syscall.PROCESS_QUERY_INFORMATION, false, uint32(pid))
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	//cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP} //, HideWindow: true, ParentProcess: handle}
-	//get the current working directory
-
-	cmd.Dir = fullPath
-
+	subApp.Context = ctx
+	subApp.Cmd = cmd
 	stdoutReader, err := cmd.StdoutPipe()
 	if err != nil {
 		logToFile("log", fmt.Sprintf("Error creating stdout pipe: %v", err), subApp)
 		cancel()
 		updateStatusSubApplication(subApp, "Failed")
-		return
+		return nil, err
 	}
 
 	stderrReader, err := cmd.StderrPipe()
@@ -260,7 +211,7 @@ func startSubApplication(subAppDef *SubApplication) {
 		logToFile("log", fmt.Sprintf("Error creating stderr pipe: %v", err), subApp)
 		cancel()
 		updateStatusSubApplication(subApp, "Failed")
-		return
+		return nil, err
 	}
 
 	// output := make(chan string)
@@ -330,13 +281,75 @@ func startSubApplication(subAppDef *SubApplication) {
 		}
 	}()
 
+	return cmd, nil
+}
+
+func startSubApplication(subAppDef *SubApplication) {
+	subApp := getCurrentSubApplication(subAppDef)
+
+	if subApp.AutoUpdate {
+		updateSubApplication(subApp)
+	}
+	updateStatusSubApplication(subApp, "Starting")
+	if subApp.FirstRun {
+		calculateFlags(subApp)
+		subApp.FirstRun = false
+		saveSubApplications()
+	}
+	var err error
+	subApp.LogFile, err = os.OpenFile(fmt.Sprintf("%s.log", subApp.Name), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		logToMainFile(fmt.Sprintf("Error opening log file for %s: %v", subApp.Name, err))
+		updateStatusSubApplication(subApp, "Not started")
+		return
+	}
+	defer subApp.LogFile.Close()
+
+	if subApp.Context != nil && subApp.CancelContext != nil {
+		logToFile("log", "Subprocess is already running", subApp)
+		updateStatusSubApplication(subApp, "Running")
+		return
+	}
+
+	var command = subApp.Command
+	var commandExec = subApp.CommandExec
+	if len(subApp.Flags) > 0 {
+		command = fmt.Sprintf("%s %s", command, strings.Join(subApp.Flags, " "))
+	}
+
+	fullPath, err := getInstallLocation(subApp)
+	if err != nil {
+		logToFile("log", fmt.Sprintf("Failed to get install location for subapplication %s: %v", subApp.Name, err), subApp)
+		return
+	}
+	command = strings.Replace(command, "$dir", fullPath, -1)
+	commandExec = strings.Replace(commandExec, "$dir", fullPath, -1)
+	logToMainFile(fmt.Sprintf("Starting subprocess: %s", commandExec))
+	logToMainFile(fmt.Sprintf("	with params: %s", command))
+	logToMainFile(fmt.Sprintf("	in directory: %s", fullPath))
+
+	cmd, err := createCommand(subApp, subApp.CommandExec)
+	if err != nil {
+		logToFile("log", fmt.Sprintf("Error creating command for subapplication %s: %v", subApp.Name, err), subApp)
+		updateStatusSubApplication(subApp, "Failed")
+		return
+	}
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CmdLine: command}
+	// pid := os.Getpid()
+	// handle, err := syscall.OpenProcess(syscall.PROCESS_QUERY_INFORMATION, false, uint32(pid))
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	//cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP} //, HideWindow: true, ParentProcess: handle}
+	//get the current working directory
+
+	cmd.Dir = fullPath
 	err = cmd.Start()
 
-	subApp.Cmd = cmd
 	if err != nil {
 		logToFile("log", fmt.Sprintf("Error starting %s: %v", subApp.Name, err), subApp, true)
 
-		cancel()
+		subApp.CancelContext()
 		updateStatusSubApplication(subApp, "Failed")
 		return
 	}
@@ -383,6 +396,7 @@ func stopSubApplication(subAppDef *SubApplication) {
 	// 	//t.Fatalf("GenerateConsoleCtrlEvent: %v\n", e)
 	// }
 	subApp.Context = nil
+	subApp.Cmd = nil
 	subApp.CancelContext = nil
 	subApp.Running = false
 

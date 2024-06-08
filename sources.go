@@ -120,7 +120,7 @@ func installSubApplication(subAppDef *SubApplication) bool {
 		return false
 	}
 	// init submodules
-	err = updateSubModules(repo)
+	err = initSubModules(repo, subApp)
 	if err != nil {
 		return false
 	}
@@ -139,7 +139,42 @@ func installSubApplication(subAppDef *SubApplication) bool {
 	return true
 }
 
-func updateSubModules(repo *git.Repository) error {
+func initSubModules(repo *git.Repository, subApp *SubApplication) error {
+	logToMainFile(fmt.Sprintf("Initializing submodules for application: %s", subApp.Name))
+	w, err := repo.Worktree()
+	if err != nil {
+		logToMainFile(fmt.Sprintf("Failed to get worktree for subapplication: %v", err))
+		return err
+	}
+
+	// Update and initialize submodules
+	submodules, err := w.Submodules()
+	if err != nil {
+		logToMainFile(fmt.Sprintf("Failed to get submodules for subapplication: %v", err))
+		return err
+	}
+	for _, submodule := range submodules {
+		logToMainFile(fmt.Sprintf("Initializing submodule: %s", submodule.Config().Name))
+		err = submodule.Init()
+		if err != nil && err != git.ErrSubmoduleAlreadyInitialized {
+			logToMainFile(fmt.Sprintf("Failed to initialize submodule: %v", err))
+			return err
+		}
+
+		err = submodule.Update(&git.SubmoduleUpdateOptions{
+			Init:              true,
+			RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+		})
+		if err != nil {
+			logToMainFile(fmt.Sprintf("Failed to initialize submodule: %v", err))
+			return err
+		}
+	}
+	return nil
+}
+
+func updateSubModules(repo *git.Repository, subApp *SubApplication) error {
+	logToMainFile(fmt.Sprintf("Updating submodules for application: %s", subApp.Name))
 	w, err := repo.Worktree()
 	if err != nil {
 		logToMainFile(fmt.Sprintf("Failed to get worktree for subapplication: %v", err))
@@ -154,9 +189,32 @@ func updateSubModules(repo *git.Repository) error {
 	}
 
 	for _, submodule := range submodules {
-		err = submodule.Init()
-		if err != nil && err != git.ErrSubmoduleAlreadyInitialized {
-			logToMainFile(fmt.Sprintf("Failed to initialize submodule: %v", err))
+		logToMainFile(fmt.Sprintf("Updating submodule: %s", submodule.Config().Name))
+
+		//stash changes on submodule
+		repo, err := submodule.Repository()
+		if err != nil {
+			logToMainFile(fmt.Sprintf("Failed to get repository for submodule: %v", err))
+			return err
+		}
+
+		err = repo.Fetch(&git.FetchOptions{
+			RemoteName: "origin",
+			Progress:   os.Stdout,
+		})
+		if err != nil {
+			if err != git.NoErrAlreadyUpToDate {
+				logToMainFile(fmt.Sprintf("Failed to update subapplication %s: %v", subApp.Name, err))
+				return err
+			} else {
+				//these operations are heavy as hell, so we skip them if we don't need to update
+				continue
+			}
+		}
+
+		stashed, err := stashChanges(repo)
+		if err != nil {
+			logToMainFile(fmt.Sprintf("Failed to stash changes for submodule: %v", err))
 			return err
 		}
 
@@ -168,8 +226,103 @@ func updateSubModules(repo *git.Repository) error {
 			logToMainFile(fmt.Sprintf("Failed to update submodule: %v", err))
 			return err
 		}
+		if stashed == 1 {
+			err = applyStashedChanges(repo)
+			if err != nil {
+				logToMainFile(fmt.Sprintf("Failed to apply stashed changes for submodule: %v", err))
+				return err
+			}
+		}
+
 	}
 	return nil
+}
+
+func applyStashedChanges(repo *git.Repository) error {
+	// Reference to the stash
+	stashRef := plumbing.ReferenceName("refs/stash")
+
+	// Get the stash reference
+	ref, err := repo.Storer.Reference(stashRef)
+	if err != nil {
+		if err == plumbing.ErrReferenceNotFound {
+			fmt.Println("No stashed changes found.")
+			return nil
+		}
+		return fmt.Errorf("failed to get stash reference: %v", err)
+	}
+
+	// Get the commit object for the stash
+	stashCommit, err := repo.CommitObject(ref.Hash())
+	if err != nil {
+		return fmt.Errorf("failed to get stash commit: %v", err)
+	}
+
+	// Get the worktree for the repository
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %v", err)
+	}
+
+	// Apply changes from the stash commit
+	err = worktree.Checkout(&git.CheckoutOptions{
+		Hash:   stashCommit.Hash,
+		Force:  true,
+		Create: false,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to checkout stash commit: %v", err)
+	}
+
+	// Remove the stash reference after applying the changes
+	err = repo.Storer.RemoveReference(stashRef)
+	if err != nil {
+		return fmt.Errorf("failed to remove stash reference: %v", err)
+	}
+
+	return nil
+}
+
+func stashChanges(repo *git.Repository) (int, error) {
+	// Get the worktree for the submodule repository
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get worktree: %v", err)
+	}
+
+	// Check the status of the worktree
+	status, err := worktree.Status()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get status: %v", err)
+	}
+
+	// If there are no changes, return 0
+	if status.IsClean() {
+		return 0, nil
+	}
+
+	// Add changes to the index
+	err = worktree.AddGlob(".")
+	if err != nil {
+		return 0, fmt.Errorf("failed to add changes: %v", err)
+	}
+
+	// Create a stash commit
+	hash, err := worktree.Commit("Stash changes", &git.CommitOptions{
+		All: true,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to create stash commit: %v", err)
+	}
+
+	// Move the stash commit to the stash reference
+	stashRef := plumbing.ReferenceName("refs/stash")
+	err = repo.Storer.SetReference(plumbing.NewHashReference(stashRef, hash))
+	if err != nil {
+		return 0, fmt.Errorf("failed to set stash reference: %v", err)
+	}
+
+	return 1, nil
 }
 
 func uninstallSubApplication(subAppDef *SubApplication) {
@@ -210,11 +363,11 @@ func checkIfSubApplicationHasUpdates(subAppDef *SubApplication) bool {
 		// 	return false
 		// }
 	}
-	w, err := r.Worktree()
-	if err != nil {
-		logToMainFile(fmt.Sprintf("Failed to get worktree for subapplication %s: %v", subApp.Name, err))
-		return false
-	}
+	//w, err := r.Worktree()
+	// if err != nil {
+	// 	logToMainFile(fmt.Sprintf("Failed to get worktree for subapplication %s: %v", subApp.Name, err))
+	// 	return false
+	// }
 	//git remote update
 	err = r.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
@@ -225,16 +378,16 @@ func checkIfSubApplicationHasUpdates(subAppDef *SubApplication) bool {
 		return false
 	}
 
-	err = w.Pull(&git.PullOptions{
-		RemoteName:    "origin",
-		ReferenceName: plumbing.NewBranchReferenceName(subApp.Branch),
-		Progress:      os.Stdout,
-	})
-	if err != nil && err != git.NoErrAlreadyUpToDate {
-		logToMainFile(fmt.Sprintf("Application is up to date %s: %v", subApp.Name, err))
-		subApp.HasUpdates = false
-		return false
-	}
+	// err = w.Pull(&git.PullOptions{
+	// 	RemoteName:    "origin",
+	// 	ReferenceName: plumbing.NewBranchReferenceName(subApp.Branch),
+	// 	Progress:      os.Stdout,
+	// })
+	// if err != nil && err != git.NoErrAlreadyUpToDate {
+	// 	logToMainFile(fmt.Sprintf("Application is up to date %s: %v", subApp.Name, err))
+	// 	subApp.HasUpdates = false
+	// 	return false
+	// }
 
 	subApp.HasUpdates = true
 	return true
@@ -257,22 +410,49 @@ func updateSubApplication(subAppDef *SubApplication) bool {
 		installed := installSubApplication(subApp)
 		return installed
 	}
+	err = r.Fetch(&git.FetchOptions{
+		RemoteName: "origin",
+		Progress:   os.Stdout,
+	})
+	if err != nil {
+		if err != git.NoErrAlreadyUpToDate {
+			logToMainFile(fmt.Sprintf("Failed to update subapplication %s: %v", subApp.Name, err))
+			return false
+		} else {
+			//don't update if there are no changes
+			return true
+		}
+	}
 	w, err := r.Worktree()
 	if err != nil {
 		logToMainFile(fmt.Sprintf("Failed to get worktree for subapplication %s: %v", subApp.Name, err))
 		return false
 	}
+	stash, err := stashChanges(r)
+	if err != nil {
+		logToMainFile(fmt.Sprintf("Failed to stash changes for subapplication %s: %v", subApp.Name, err))
+		return false
+	}
 	err = w.Pull(&git.PullOptions{
-		RemoteName:    "origin",
-		ReferenceName: plumbing.NewBranchReferenceName(subApp.Branch),
-		Progress:      os.Stdout,
+		RemoteName:        "origin",
+		ReferenceName:     plumbing.NewBranchReferenceName(subApp.Branch),
+		Progress:          os.Stdout,
+		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
 	})
+	if stash == 1 {
+		err = applyStashedChanges(r)
+		if err != nil {
+			logToMainFile(fmt.Sprintf("Failed to apply stashed changes for subapplication %s: %v", subApp.Name, err))
+			return false
+		}
+	}
+
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		logToMainFile(fmt.Sprintf("Failed to update subapplication %s: %v", subApp.Name, err))
 		return false
 	}
 
-	err = updateSubModules(r)
+	err = updateSubModules(r, subApp)
 	if err != nil {
 		return false
 	}
