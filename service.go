@@ -30,7 +30,7 @@ func runApplication() {
 func runInteractive() {
 	log.Print("Running in interactive mode")
 	service := newMyService()
-	baseLoop(service.quit, service.done)
+	go baseLoop(service.quit, service.done)
 }
 
 var status_app string = "starting"

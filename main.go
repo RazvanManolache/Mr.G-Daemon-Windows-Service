@@ -14,13 +14,8 @@ var niceServiceName = "Mr.G AI Daemon"
 var subApplications []*SubApplication
 
 func main() {
-	readConfigFile()
-	err := startServer()
-	if err != nil {
-		logToMainFile(fmt.Sprintf("Error starting server: %v", err))
-		fmt.Printf("Error starting server: %v\n", err)
-		return
-	}
+	go readConfigFile()
+	go startServer()
 
 	scheduler()
 	detectGPU()

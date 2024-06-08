@@ -55,12 +55,12 @@ func startServer() error {
 	http.HandleFunc("/applications", listApplications)
 	http.HandleFunc("/kits", listKits)
 	http.HandleFunc("/ws", wsHandler)
-
+	go broadcastMessages()
 	err := http.ListenAndServe(":8187", nil)
 	if err != nil {
 		return err
 	}
-	go broadcastMessages()
+
 	return nil
 }
 
