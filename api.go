@@ -44,7 +44,7 @@ var broadcast_response = make(chan interface{})
 
 //var broadcast_socket = make(chan []byte) // broadcast channel
 
-func startServer() {
+func startServer() error {
 
 	http.HandleFunc("/config", changeConfig)
 	http.HandleFunc("/flags", listFlags)
@@ -56,9 +56,12 @@ func startServer() {
 	http.HandleFunc("/kits", listKits)
 	http.HandleFunc("/ws", wsHandler)
 
+	err := http.ListenAndServe(":8187", nil)
+	if err != nil {
+		return err
+	}
 	go broadcastMessages()
-	http.ListenAndServe(":8187", nil)
-
+	return nil
 }
 
 func listKits(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +101,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		request := strings.ToLower(msg.Request)
 		switch request {
 		case "stopservice":
-			stopService()
+			softStopService()
 		case "restartservice":
 			restartService()
 		case "config":

@@ -8,12 +8,21 @@ import (
 	"syscall"
 )
 
-var appName = "MrG.AI.Daemon"
+var serviceName = "MrG.AI.Daemon"
+var niceServiceName = "Mr.G AI Daemon"
+
+var subApplications []*SubApplication
 
 func main() {
-	go readConfigFile()
-	go startServer()
-	go scheduler()
+	readConfigFile()
+	err := startServer()
+	if err != nil {
+		logToMainFile(fmt.Sprintf("Error starting server: %v", err))
+		fmt.Printf("Error starting server: %v\n", err)
+		return
+	}
+
+	scheduler()
 	detectGPU()
 	detectGPU_Windows()
 	runApplication()
@@ -26,8 +35,6 @@ func main() {
 		os.Exit(1)
 	}()
 }
-
-var subApplications []*SubApplication
 
 // Implement mainService
 func baseLoop(quit <-chan struct{}, done chan<- struct{}) {
@@ -52,23 +59,35 @@ func baseLoop(quit <-chan struct{}, done chan<- struct{}) {
 			}
 
 			switch commands[0] {
+			case "install":
+				installService(serviceName, niceServiceName)
+				return
+			case "remove":
+				removeService(serviceName)
+				return
+			case "start":
+				startService(serviceName)
+				return
+			case "stop":
+				stopService(serviceName)
+				return
 			case "stopservice":
-				stopService()
+				softStopService()
 			case "restartservice":
 				restartService()
-			case "install":
+			case "appinstall":
 				for _, subApp := range subApplications {
 					if subApp.Name == commands[1] {
 						installSubApplication(subApp)
 					}
 				}
-			case "update":
+			case "appupdate":
 				for _, subApp := range subApplications {
 					if subApp.Name == commands[1] {
 						updateSubApplication(subApp)
 					}
 				}
-			case "start":
+			case "appstart":
 				if commands[1] == "all" {
 					for _, subApp := range subApplications {
 						startSubApplication(subApp)
@@ -80,7 +99,7 @@ func baseLoop(quit <-chan struct{}, done chan<- struct{}) {
 						}
 					}
 				}
-			case "stop":
+			case "appstop":
 				if commands[1] == "all" {
 					stopAllSubApplications()
 				} else {
@@ -90,7 +109,7 @@ func baseLoop(quit <-chan struct{}, done chan<- struct{}) {
 						}
 					}
 				}
-			case "restart":
+			case "apprestart":
 				if commands[1] == "all" {
 					for _, subApp := range subApplications {
 						restartSubApplication(subApp)

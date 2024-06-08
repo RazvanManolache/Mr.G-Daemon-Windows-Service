@@ -20,7 +20,7 @@ type GitHubContent struct {
 func constructGitHubAPIURL(repo string, path string) string {
 	parts := strings.Split(repo, "/")
 	if len(parts) != 2 {
-		fmt.Println("Invalid repository format. Use 'owner/repo'")
+		logToMainFile("Invalid repository format. Use 'owner/repo'")
 		return ""
 	}
 	owner, repoName := parts[0], parts[1]
@@ -246,7 +246,7 @@ func applyStashedChanges(repo *git.Repository) error {
 	ref, err := repo.Storer.Reference(stashRef)
 	if err != nil {
 		if err == plumbing.ErrReferenceNotFound {
-			fmt.Println("No stashed changes found.")
+			logToMainFile("No stashed changes found.")
 			return nil
 		}
 		return fmt.Errorf("failed to get stash reference: %v", err)

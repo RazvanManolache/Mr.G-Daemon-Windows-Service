@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"os"
 	"strings"
 	"sync"
 )
@@ -17,29 +16,17 @@ func apiStatusInternal() (*DeamonStatus, error) {
 	defer broadcastToSocket("config", CurrentConfig)
 	defer broadcastToSocket("subapplications", subApplications)
 	go getAllKits()
-	state := DeamonStatus{Name: appName, Config: CurrentConfig, SubApplications: subApplications}
+	state := DeamonStatus{Name: serviceName, Config: CurrentConfig, SubApplications: subApplications}
 
 	return &state, nil
 }
 
-func stopService() {
-	status_app = "Stopping"
-	stopAllSubApplications()
-	service.quit <- struct{}{}
-	os.Exit(0)
-}
-
-func restartService() {
-	stopService()
-	status_app = "Restarting"
-	runService(appName, false)
-}
-func listFlagsInternal(appName string) (*FlagsAndGroups, error) {
+func listFlagsInternal(subAppName string) (*FlagsAndGroups, error) {
 
 	// find application
 	var app *SubApplication = nil
 	for _, subApp := range subApplications {
-		if subApp.Name == appName {
+		if subApp.Name == subAppName {
 			app = subApp
 		}
 	}
