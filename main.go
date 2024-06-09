@@ -11,15 +11,8 @@ import (
 var serviceName = "MrG.AI.Daemon"
 var niceServiceName = "Mr.G AI Daemon"
 
-var subApplications []*SubApplication
-
 func main() {
-	go readConfigFile()
-	go startServer()
 
-	scheduler()
-	detectGPU()
-	detectGPU_Windows()
 	runApplication()
 
 	c := make(chan os.Signal, 1)
@@ -33,13 +26,6 @@ func main() {
 
 // Implement mainService
 func baseLoop(quit <-chan struct{}, done chan<- struct{}) {
-	subApplications = readSubApplications()
-
-	for _, subApp := range subApplications {
-		if subApp.AutoStart {
-			startSubApplication(subApp)
-		}
-	}
 
 	go func() {
 		for {
@@ -73,24 +59,24 @@ func baseLoop(quit <-chan struct{}, done chan<- struct{}) {
 			case "appinstall":
 				for _, subApp := range subApplications {
 					if subApp.Name == commands[1] {
-						installSubApplication(subApp)
+						subApp.install()
 					}
 				}
 			case "appupdate":
 				for _, subApp := range subApplications {
 					if subApp.Name == commands[1] {
-						updateSubApplication(subApp)
+						subApp.update()
 					}
 				}
 			case "appstart":
 				if commands[1] == "all" {
 					for _, subApp := range subApplications {
-						startSubApplication(subApp)
+						subApp.start()
 					}
 				} else {
 					for _, subApp := range subApplications {
 						if subApp.Name == commands[1] {
-							startSubApplication(subApp)
+							subApp.start()
 						}
 					}
 				}
@@ -100,19 +86,19 @@ func baseLoop(quit <-chan struct{}, done chan<- struct{}) {
 				} else {
 					for _, subApp := range subApplications {
 						if subApp.Name == commands[1] {
-							stopSubApplication(subApp)
+							subApp.stop()
 						}
 					}
 				}
 			case "apprestart":
 				if commands[1] == "all" {
 					for _, subApp := range subApplications {
-						restartSubApplication(subApp)
+						subApp.restart()
 					}
 				} else {
 					for _, subApp := range subApplications {
 						if subApp.Name == commands[1] {
-							restartSubApplication(subApp)
+							subApp.restart()
 						}
 					}
 				}
@@ -125,7 +111,7 @@ func baseLoop(quit <-chan struct{}, done chan<- struct{}) {
 
 	<-quit
 	for _, subApp := range subApplications {
-		stopSubApplication(subApp)
+		subApp.stop()
 	}
 	close(done)
 }

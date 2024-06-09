@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -48,111 +47,27 @@ type SubApplicationStatus struct {
 	Status string `json:"status"`
 }
 
-func updateStatusSubApplication(subApp *SubApplication, status string) {
+var subApplications []*SubApplication
+
+func (subApp *SubApplication) updateStatus(status string) {
 	subApp.Status = status
 	notifySubApplicationsStatusChange()
 }
 
-func notifySubApplicationsStatusChange() {
-	statuses := getStatusOnlyArray(subApplications)
-	defer broadcastToSocket("statuses", statuses)
-}
-
-func getStatusOnly(subApp *SubApplication) *SubApplicationStatus {
+func (subApp *SubApplication) getStatusOnly() *SubApplicationStatus {
 	return &SubApplicationStatus{
 		Id:     subApp.Id,
 		Status: subApp.Status,
 	}
 }
 
-var getStatusOnlyArray = func(subApps []*SubApplication) []*SubApplicationStatus {
-	var statusArray []*SubApplicationStatus
-	for _, subApp := range subApps {
-		statusArray = append(statusArray, getStatusOnly(subApp))
-	}
-	return statusArray
-}
-
-func addSubApplication(subApp *SubApplication) *SubApplication {
-	defer listApplicationsInternal()
-	if subApp.Id == "" {
-		id, err := generateId()
-		if err != nil {
-			logToMainFile(fmt.Sprintf("Error generating id: %v", err))
-			return nil
-		}
-		subApp.Id = id
-	}
-
-	//find if exists
-	for _, s := range subApplications {
-		if s.Id == subApp.Id {
-			return nil
-		}
-	}
-
-	subApplications = append(subApplications, subApp)
-	saveSubApplications()
-	if subApp.AutoStart {
-		startSubApplication(subApp)
-	}
-	return subApp
-}
-
-func removeSubApplication(appId string) {
-	for i, s := range subApplications {
-		if s.Id == appId {
-			subApplications = append(subApplications[:i], subApplications[i+1:]...)
-			saveSubApplications()
-			return
-		}
-	}
-}
-
-func modifySubApplication(subApp *SubApplication) *SubApplication {
-	for i, s := range subApplications {
-		if s.Id == subApp.Id {
-			var subApp = subApplications[i]
-			var running = subApp.Running
-			if running {
-				stopSubApplication(subApp)
-			}
-			subApplications[i] = subApp
-			saveSubApplications()
-			if running {
-				startSubApplication(subApp)
-			}
-			return subApp
-		}
-	}
-	return nil
-}
-
-func readSubApplications() []*SubApplication {
-	var subApplications []*SubApplication
-	configFile, err := os.Open(subApplicationFile)
-
-	if err != nil {
-		logToMainFile(fmt.Sprintf("Error opening config file: %v", err))
-
-	} else {
-		err = json.NewDecoder(configFile).Decode(&subApplications)
-		if err != nil {
-			logToMainFile(fmt.Sprintf("Error decoding config file: %v", err))
-		}
-	}
-
-	defer configFile.Close()
-	return subApplications
-}
-
-func calculateFlags(subApp *SubApplication) {
+func (subApp *SubApplication) calculateFlags() {
 	if subApp.AppType == "comfy" {
 		subApp.Flags = append(subApp.Flags, "comfy")
 	}
 }
 
-func runSetupCommand(subApp *SubApplication) error {
+func (subApp *SubApplication) runSetupCommand() error {
 	if subApp.SetupCommand == "" {
 		return nil
 	}
@@ -168,13 +83,13 @@ func runSetupCommand(subApp *SubApplication) error {
 
 	joinedRest := strings.Join(commandParams[1:], " ")
 
-	cmd, err := createCommand(subApp, command)
+	cmd, err := subApp.createCommand(command)
 	subApp.CancelContext = nil
 	subApp.Context = nil
 	subApp.Cmd = nil
 	if err != nil {
 		logToFile("log", fmt.Sprintf("Error creating command for subapplication %s: %v", subApp.Name, err), subApp)
-		updateStatusSubApplication(subApp, "Failed")
+		subApp.updateStatus("Failed")
 		return err
 	}
 
@@ -192,7 +107,7 @@ func runSetupCommand(subApp *SubApplication) error {
 	return nil
 }
 
-func createCommand(subApp *SubApplication, command string) (*exec.Cmd, error) {
+func (subApp *SubApplication) createCommand(command string) (*exec.Cmd, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, command)
 	subApp.CancelContext = cancel
@@ -202,7 +117,7 @@ func createCommand(subApp *SubApplication, command string) (*exec.Cmd, error) {
 	if err != nil {
 		logToFile("log", fmt.Sprintf("Error creating stdout pipe: %v", err), subApp)
 		cancel()
-		updateStatusSubApplication(subApp, "Failed")
+		subApp.updateStatus("Failed")
 		return nil, err
 	}
 
@@ -210,7 +125,7 @@ func createCommand(subApp *SubApplication, command string) (*exec.Cmd, error) {
 	if err != nil {
 		logToFile("log", fmt.Sprintf("Error creating stderr pipe: %v", err), subApp)
 		cancel()
-		updateStatusSubApplication(subApp, "Failed")
+		subApp.updateStatus("Failed")
 		return nil, err
 	}
 
@@ -256,14 +171,14 @@ func createCommand(subApp *SubApplication, command string) (*exec.Cmd, error) {
 		// }
 		scanner := bufio.NewScanner(stdoutReader)
 		for scanner.Scan() {
-			updateStatusSubApplication(subApp, "Running")
+			subApp.updateStatus("Running")
 			logToFile("console", scanner.Text(), subApp)
 
 			if subApp.RestartOnCriticalError {
 				for _, message := range subApp.CriticalErrorMessages {
 					if strings.Contains(scanner.Text(), message) {
 						logToFile("log", fmt.Sprintf("Detected critical message, restarting: %s", message), subApp, true)
-						restartSubApplication(subApp)
+						subApp.restart()
 					}
 				}
 			}
@@ -284,15 +199,15 @@ func createCommand(subApp *SubApplication, command string) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
-func startSubApplication(subAppDef *SubApplication) {
-	subApp := getCurrentSubApplication(subAppDef)
+func (subAppDef *SubApplication) start() {
+	subApp := subAppDef.getCurrent()
 
 	if subApp.AutoUpdate {
-		updateSubApplication(subApp)
+		subApp.update()
 	}
-	updateStatusSubApplication(subApp, "Starting")
+	subApp.updateStatus("Starting")
 	if subApp.FirstRun {
-		calculateFlags(subApp)
+		subApp.calculateFlags()
 		subApp.FirstRun = false
 		saveSubApplications()
 	}
@@ -300,14 +215,14 @@ func startSubApplication(subAppDef *SubApplication) {
 	subApp.LogFile, err = os.OpenFile(fmt.Sprintf("%s.log", subApp.Name), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		logToMainFile(fmt.Sprintf("Error opening log file for %s: %v", subApp.Name, err))
-		updateStatusSubApplication(subApp, "Not started")
+		subApp.updateStatus("Not started")
 		return
 	}
 	defer subApp.LogFile.Close()
 
 	if subApp.Context != nil && subApp.CancelContext != nil {
 		logToFile("log", "Subprocess is already running", subApp)
-		updateStatusSubApplication(subApp, "Running")
+		subApp.updateStatus("Running")
 		return
 	}
 
@@ -328,10 +243,10 @@ func startSubApplication(subAppDef *SubApplication) {
 	logToMainFile(fmt.Sprintf("	with params: %s", command))
 	logToMainFile(fmt.Sprintf("	in directory: %s", fullPath))
 
-	cmd, err := createCommand(subApp, subApp.CommandExec)
+	cmd, err := subApp.createCommand(subApp.CommandExec)
 	if err != nil {
 		logToFile("log", fmt.Sprintf("Error creating command for subapplication %s: %v", subApp.Name, err), subApp)
-		updateStatusSubApplication(subApp, "Failed")
+		subApp.updateStatus("Failed")
 		return
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CmdLine: command}
@@ -350,34 +265,24 @@ func startSubApplication(subAppDef *SubApplication) {
 		logToFile("log", fmt.Sprintf("Error starting %s: %v", subApp.Name, err), subApp, true)
 
 		subApp.CancelContext()
-		updateStatusSubApplication(subApp, "Failed")
+		subApp.updateStatus("Failed")
 		return
 	}
-	updateStatusSubApplication(subApp, "Running")
+	subApp.updateStatus("Running")
 	subApp.Running = true
 	logToFile("log", "Subprocess started", subApp, true)
 
 }
 
-func getCurrentSubApplication(subAppDef *SubApplication) *SubApplication {
-	for _, subApp := range subApplications {
-		if subApp.Id == subAppDef.Id {
-			return subApp
-		}
-	}
-	return nil
-
-}
-
-func stopSubApplication(subAppDef *SubApplication) {
-	subApp := getCurrentSubApplication(subAppDef)
+func (subAppDef *SubApplication) stop() {
+	subApp := subAppDef.getCurrent()
 
 	if subApp.Context == nil || subApp.CancelContext == nil {
 		logToFile("log", "Subprocess is not running", subApp)
-		updateStatusSubApplication(subApp, "Stopped")
+		subApp.updateStatus("Stopped")
 		return
 	}
-	updateStatusSubApplication(subApp, "Stopping")
+	subApp.updateStatus("Stopping")
 	err := subApp.Cmd.Process.Kill()
 	if err != nil {
 		logToFile("log", fmt.Sprintf("Error stopping %s: %v", subApp.Name, err), subApp)
@@ -401,50 +306,97 @@ func stopSubApplication(subAppDef *SubApplication) {
 	subApp.Running = false
 
 	logToFile("log", "Subprocess stopped", subApp)
-	updateStatusSubApplication(subApp, "Stopped")
+	subApp.updateStatus("Stopped")
 }
 
-func restartSubApplication(subAppDef *SubApplication) {
-	subApp := getCurrentSubApplication(subAppDef)
-	updateStatusSubApplication(subApp, "Restarting")
-	stopSubApplication(subApp)
+func (subAppDef *SubApplication) restart() {
+	subApp := subAppDef.getCurrent()
+	subApp.updateStatus("Restarting")
+	subApp.stop()
 	time.Sleep(1 * time.Second)
-	startSubApplication(subApp)
+	subApp.start()
 }
 
-func checkSubApplicationUpdatesInternal() {
-	var hasUpdates bool = false
-	for app := range subApplications {
-		subapp := subApplications[app]
-		checkIfSubApplicationHasUpdates(subapp)
-		if subapp.HasUpdates {
-			hasUpdates = true
+func (subAppDef *SubApplication) getCurrent() *SubApplication {
+	for _, subApp := range subApplications {
+		if subApp.Id == subAppDef.Id {
+			return subApp
 		}
 	}
-	if hasUpdates {
-		broadcastToSocket("subapplications", subApplications)
+	return nil
+
+}
+func (subApp *SubApplication) modify() *SubApplication {
+	for i, s := range subApplications {
+		if s.Id == subApp.Id {
+			var subApp = subApplications[i]
+			var running = subApp.Running
+			if running {
+				subApp.stop()
+			}
+			subApplications[i] = subApp
+			saveSubApplications()
+			if running {
+				subApp.start()
+			}
+			return subApp
+		}
+	}
+	return nil
+}
+
+func (subApp *SubApplication) add() *SubApplication {
+	defer listApplicationsInternal()
+	if subApp.Id == "" {
+		id, err := generateId()
+		if err != nil {
+			logToMainFile(fmt.Sprintf("Error generating id: %v", err))
+			return nil
+		}
+		subApp.Id = id
+	}
+
+	//find if exists
+	for _, s := range subApplications {
+		if s.Id == subApp.Id {
+			return nil
+		}
+	}
+
+	subApplications = append(subApplications, subApp)
+	saveSubApplications()
+	if subApp.AutoStart {
+		subApp.start()
+	}
+	return subApp
+}
+
+func (subApp *SubApplication) remove() {
+	for i, s := range subApplications {
+		if s.Id == subApp.Id {
+			subApplications = append(subApplications[:i], subApplications[i+1:]...)
+			saveSubApplications()
+			return
+		}
 	}
 }
 
-func stopAllSubApplications() {
+func (sub *SubApplication) listFlags() (*FlagsAndGroups, error) {
+
+	// find application
+	var app *SubApplication = nil
 	for _, subApp := range subApplications {
-		stopSubApplication(subApp)
+		if subApp.Name == sub.Name || subApp.Id == sub.Id {
+			app = subApp
+		}
 	}
-}
-
-func saveSubApplications() {
-	configFile, err := os.Create(subApplicationFile)
-	if err != nil {
-		logToMainFile(fmt.Sprintf("Error creating config file: %v", err))
-		return
-	}
-	defer configFile.Close()
-
-	encoder := json.NewEncoder(configFile)
-	encoder.SetIndent("", "    ")
-	err = encoder.Encode(subApplications)
-	if err != nil {
-		logToMainFile(fmt.Sprintf("Error encoding config file: %v", err))
+	if app == nil {
+		return nil, makeError("invalid app", nil)
 	}
 
+	// get type of app and get flags
+	flagsAndGroups := readFlagsAndGroups(app.AppType)
+	defer broadcastToSocket("flags", flagsAndGroups)
+
+	return &flagsAndGroups, nil
 }

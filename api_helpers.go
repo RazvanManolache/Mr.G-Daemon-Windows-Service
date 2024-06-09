@@ -21,26 +21,6 @@ func apiStatusInternal() (*DeamonStatus, error) {
 	return &state, nil
 }
 
-func listFlagsInternal(subAppName string) (*FlagsAndGroups, error) {
-
-	// find application
-	var app *SubApplication = nil
-	for _, subApp := range subApplications {
-		if subApp.Name == subAppName {
-			app = subApp
-		}
-	}
-	if app == nil {
-		return nil, makeError("invalid app", nil)
-	}
-
-	// get type of app and get flags
-	flagsAndGroups := readFlagsAndGroups(app.AppType)
-	defer broadcastToSocket("flags", flagsAndGroups)
-
-	return &flagsAndGroups, nil
-}
-
 func listDiskSpaceInternal() ([]DiskSpace, error) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -87,11 +67,11 @@ func appRequestHandlerInternal(changes SubApplication, operation string) (*Appli
 
 	switch operation {
 	case "post":
-		addSubApplication(&changes)
+		changes.add()
 	case "put":
-		modifySubApplication(&changes)
+		changes.modify()
 	case "delete":
-		removeSubApplication(changes.Id)
+		changes.remove()
 	default:
 		return nil, makeError("invalid operation", nil)
 	}

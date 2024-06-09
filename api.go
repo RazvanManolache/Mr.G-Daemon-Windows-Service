@@ -109,25 +109,25 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		case "diskinfo":
 			listDiskSpaceInternal()
 		case "flags":
-			listFlagsInternal(msg.App.Id)
+			msg.App.listFlags()
 		case "appadd":
-			addSubApplication(&msg.App)
+			msg.App.add()
 		case "appinstall":
-			installSubApplication(&msg.App)
+			msg.App.install()
 		case "appupdate":
-			updateSubApplication(&msg.App)
+			msg.App.update()
 		case "appstart":
-			startSubApplication(&msg.App)
+			msg.App.start()
 		case "appstop":
-			stopSubApplication(&msg.App)
+			msg.App.stop()
 		case "apprestart":
-			restartSubApplication(&msg.App)
+			msg.App.restart()
 		case "appuninstall":
-			uninstallSubApplication(&msg.App)
+			msg.App.uninstall()
 		case "appconfig":
-			modifySubApplication(&msg.App)
+			msg.App.modify()
 		case "appremove":
-			removeSubApplication(msg.App.Id)
+			msg.App.remove()
 		case "applist":
 			listApplicationsInternal()
 		case "status":
@@ -216,7 +216,9 @@ func listApplications(w http.ResponseWriter, r *http.Request) {
 
 func listFlags(w http.ResponseWriter, r *http.Request) {
 	application := r.URL.Query().Get("application")
-	obj, err := listFlagsInternal(application)
+
+	var app = SubApplication{Id: application, Name: application}
+	obj, err := app.listFlags()
 	handleJsonAndError(w, obj, err)
 }
 

@@ -102,8 +102,8 @@ func getKitList(repoUrl string) []SubApplication {
 	return kits
 }
 
-func installSubApplication(subAppDef *SubApplication) bool {
-	subApp := getCurrentSubApplication(subAppDef)
+func (subAppDef *SubApplication) install() bool {
+	subApp := subAppDef.getCurrent()
 	logToMainFile(fmt.Sprintf("Installing subapplication: %s", subApp.Name))
 	installLoc, err := getInstallLocation(subApp)
 	if err != nil {
@@ -125,7 +125,7 @@ func installSubApplication(subAppDef *SubApplication) bool {
 		return false
 	}
 	//run setup comand
-	err = runSetupCommand(subApp)
+	err = subApp.runSetupCommand()
 	if err != nil {
 		return false
 	}
@@ -135,7 +135,7 @@ func installSubApplication(subAppDef *SubApplication) bool {
 	subApp.FirstRun = true
 	saveSubApplications()
 
-	checkSymLinks(subApp)
+	subApp.checkSymLinks()
 	return true
 }
 
@@ -325,10 +325,10 @@ func stashChanges(repo *git.Repository) (int, error) {
 	return 1, nil
 }
 
-func uninstallSubApplication(subAppDef *SubApplication) {
-	subApp := getCurrentSubApplication(subAppDef)
+func (subAppDef *SubApplication) uninstall() {
+	subApp := subAppDef.getCurrent()
 	logToMainFile(fmt.Sprintf("Uninstalling subapplication: %s", subApp.Name))
-	stopSubApplication(subApp)
+	subApp.stop()
 	installLoc, err := getInstallLocation(subApp)
 	if err != nil {
 		logToFile("log", fmt.Sprintf("Failed to get install location for subapplication %s: %v", subApp.Name, err), nil)
@@ -345,8 +345,8 @@ func uninstallSubApplication(subAppDef *SubApplication) {
 	saveSubApplications()
 }
 
-func checkIfSubApplicationHasUpdates(subAppDef *SubApplication) bool {
-	subApp := getCurrentSubApplication(subAppDef)
+func (subAppDef *SubApplication) checkUpdates() bool {
+	subApp := subAppDef.getCurrent()
 	installLoc, err := getInstallLocation(subApp)
 	if err != nil {
 		logToFile("log", fmt.Sprintf("Failed to get install location for subapplication %s: %v", subApp.Name, err), nil)
@@ -394,8 +394,8 @@ func checkIfSubApplicationHasUpdates(subAppDef *SubApplication) bool {
 
 }
 
-func updateSubApplication(subAppDef *SubApplication) bool {
-	subApp := getCurrentSubApplication(subAppDef)
+func (subAppDef *SubApplication) update() bool {
+	subApp := subAppDef.getCurrent()
 	logToMainFile(fmt.Sprintf("Updating subapplication: %s", subApp.Name))
 	installLoc, err := getInstallLocation(subApp)
 	if err != nil {
@@ -407,7 +407,7 @@ func updateSubApplication(subAppDef *SubApplication) bool {
 
 		logToMainFile(fmt.Sprintf("Application not found %s for update, installing: %v", subApp.Name, err))
 		os.RemoveAll(installLoc)
-		installed := installSubApplication(subApp)
+		installed := subApp.install()
 		return installed
 	}
 	err = r.Fetch(&git.FetchOptions{
@@ -456,15 +456,15 @@ func updateSubApplication(subAppDef *SubApplication) bool {
 	if err != nil {
 		return false
 	}
-	err = runSetupCommand(subApp)
+	err = subApp.runSetupCommand()
 	if err != nil {
 		return false
 	}
-	checkSymLinks(subApp)
+	subApp.checkSymLinks()
 	return true
 }
 
-func checkSymLinks(subApp *SubApplication) {
+func (subApp *SubApplication) checkSymLinks() {
 	installLoc, err := getInstallLocation(subApp)
 	if err != nil {
 		logToFile("log", fmt.Sprintf("Failed to get install location for subapplication %s: %v", subApp.Name, err), nil)
