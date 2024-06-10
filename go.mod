@@ -7,7 +7,11 @@ require (
 	gopkg.in/src-d/go-git.v4 v4.13.1
 )
 
-require github.com/go-gl/glfw v0.0.0-20240506104042-037f3cc74f2a // indirect
+require (
+	github.com/go-gl/glfw v0.0.0-20240506104042-037f3cc74f2a // indirect
+	github.com/gopherjs/gopherjs v1.17.2 // indirect
+	github.com/gopherjs/webgl v0.0.0-20180508003723-39bd6d41eeb5 // indirect
+)
 
 require (
 	azul3d.org/engine v0.0.0-20211024043305-793ea6c2839d

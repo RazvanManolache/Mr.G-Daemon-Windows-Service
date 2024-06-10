@@ -29,7 +29,7 @@ func run() {
 	go startServer()
 
 	scheduler()
-	detectGPU()
+	//detectGPU()
 	detectGPU_Windows()
 
 	subApplications = readSubApplications()
