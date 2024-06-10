@@ -6,11 +6,13 @@ import (
 	"os"
 )
 
+// notifySubApplicationsStatusChange notifies all connected clients of the status of all subapplications
 func notifySubApplicationsStatusChange() {
 	statuses := getStatusOnlyArray(subApplications)
 	defer broadcastToSocket("statuses", statuses)
 }
 
+// getStatusOnlyArray returns an array of SubApplicationStatus objects from an array of SubApplication objects
 func getStatusOnlyArray(subApps []*SubApplication) []*SubApplicationStatus {
 	var statusArray []*SubApplicationStatus
 	for _, subApp := range subApps {
@@ -19,6 +21,7 @@ func getStatusOnlyArray(subApps []*SubApplication) []*SubApplicationStatus {
 	return statusArray
 }
 
+// readSubApplications reads the subapplications from the subApplicationFile
 func readSubApplications() []*SubApplication {
 	var subApplications []*SubApplication
 	configFile, err := os.Open(subApplicationFile)
@@ -37,6 +40,7 @@ func readSubApplications() []*SubApplication {
 	return subApplications
 }
 
+// checkSubApplicationUpdatesInternal checks for updates to all subapplications
 func checkSubApplicationUpdatesInternal() {
 	var hasUpdates bool = false
 	for app := range subApplications {
@@ -50,12 +54,15 @@ func checkSubApplicationUpdatesInternal() {
 		broadcastToSocket("subapplications", subApplications)
 	}
 }
+
+// startAllSubApplications starts all subapplications that are set to autostart
 func stopAllSubApplications() {
 	for _, subApp := range subApplications {
 		subApp.stop()
 	}
 }
 
+// saveSubApplications saves the subapplications to the subApplicationFile
 func saveSubApplications() {
 	configFile, err := os.Create(subApplicationFile)
 	if err != nil {

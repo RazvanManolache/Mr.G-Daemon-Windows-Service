@@ -9,6 +9,8 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
+// methods to install, remove, start, and stop a service
+
 func installService(name, desc string) {
 	m, err := mgr.Connect()
 	if err != nil {

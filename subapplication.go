@@ -49,11 +49,14 @@ type SubApplicationStatus struct {
 
 var subApplications []*SubApplication
 
+// updateStatus updates the status of the subprocess
+
 func (subApp *SubApplication) updateStatus(status string) {
 	subApp.Status = status
 	notifySubApplicationsStatusChange()
 }
 
+// getStatusOnly returns a SubApplicationStatus object with only the id and status
 func (subApp *SubApplication) getStatusOnly() *SubApplicationStatus {
 	return &SubApplicationStatus{
 		Id:     subApp.Id,
@@ -61,12 +64,14 @@ func (subApp *SubApplication) getStatusOnly() *SubApplicationStatus {
 	}
 }
 
+// calculateFlags calculates the flags for the subprocess
 func (subApp *SubApplication) calculateFlags() {
 	if subApp.AppType == "comfy" {
 		subApp.Flags = append(subApp.Flags, "comfy")
 	}
 }
 
+// runSetupCommand runs the setup command for the subprocess
 func (subApp *SubApplication) runSetupCommand() error {
 	if subApp.SetupCommand == "" {
 		return nil
@@ -107,6 +112,7 @@ func (subApp *SubApplication) runSetupCommand() error {
 	return nil
 }
 
+// createCommand creates a command for the subprocess
 func (subApp *SubApplication) createCommand(command string) (*exec.Cmd, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, command)
@@ -309,6 +315,7 @@ func (subAppDef *SubApplication) stop() {
 	subApp.updateStatus("Stopped")
 }
 
+// restart restarts the subprocess
 func (subAppDef *SubApplication) restart() {
 	subApp := subAppDef.getCurrent()
 	subApp.updateStatus("Restarting")
@@ -317,6 +324,7 @@ func (subAppDef *SubApplication) restart() {
 	subApp.start()
 }
 
+// getCurrent returns the current subprocess based on the id
 func (subAppDef *SubApplication) getCurrent() *SubApplication {
 	for _, subApp := range subApplications {
 		if subApp.Id == subAppDef.Id {
@@ -326,6 +334,8 @@ func (subAppDef *SubApplication) getCurrent() *SubApplication {
 	return nil
 
 }
+
+// modify modifies the subprocess, restarting it if necessary
 func (subApp *SubApplication) modify() *SubApplication {
 	for i, s := range subApplications {
 		if s.Id == subApp.Id {
@@ -345,6 +355,7 @@ func (subApp *SubApplication) modify() *SubApplication {
 	return nil
 }
 
+// add adds a subprocess to the list
 func (subApp *SubApplication) add() *SubApplication {
 	defer listApplicationsInternal()
 	if subApp.Id == "" {
@@ -371,9 +382,14 @@ func (subApp *SubApplication) add() *SubApplication {
 	return subApp
 }
 
+// remove removes a subprocess from the list
+
 func (subApp *SubApplication) remove() {
 	for i, s := range subApplications {
 		if s.Id == subApp.Id {
+			if subApp.Running {
+				subApp.stop()
+			}
 			subApplications = append(subApplications[:i], subApplications[i+1:]...)
 			saveSubApplications()
 			return
@@ -381,6 +397,7 @@ func (subApp *SubApplication) remove() {
 	}
 }
 
+// listFlags lists the flags for the subprocess
 func (sub *SubApplication) listFlags() (*FlagsAndGroups, error) {
 
 	// find application

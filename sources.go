@@ -17,6 +17,7 @@ type GitHubContent struct {
 	Content string `json:"content"`
 }
 
+// constructGitHubAPIURL constructs the URL for the GitHub API
 func constructGitHubAPIURL(repo string, path string) string {
 	parts := strings.Split(repo, "/")
 	if len(parts) != 2 {
@@ -27,6 +28,7 @@ func constructGitHubAPIURL(repo string, path string) string {
 	return fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s", owner, repoName, path)
 }
 
+// readGitHubFile reads a file from a GitHub repository
 func readGitHubFile(repo string, path string) (string, error) {
 	url := constructGitHubAPIURL(repo, path)
 	if url == "" {
@@ -62,6 +64,7 @@ func readGitHubFile(repo string, path string) (string, error) {
 	return string(decoded), nil
 }
 
+// getAllKits gets all kits from all kit repositories
 func getAllKits() []SubApplication {
 
 	var kits []SubApplication = getKitList(mainAppKitRepository)
@@ -86,6 +89,7 @@ func getAllKits() []SubApplication {
 	return kits
 }
 
+// getKitList gets the list of kits from a repository
 func getKitList(repoUrl string) []SubApplication {
 	content, err := readGitHubFile(repoUrl, "list.json")
 	if err != nil {
@@ -102,6 +106,7 @@ func getKitList(repoUrl string) []SubApplication {
 	return kits
 }
 
+// install a subapplication
 func (subAppDef *SubApplication) install() bool {
 	subApp := subAppDef.getCurrent()
 	logToMainFile(fmt.Sprintf("Installing subapplication: %s", subApp.Name))
@@ -139,6 +144,7 @@ func (subAppDef *SubApplication) install() bool {
 	return true
 }
 
+// initSubModules initializes the submodules for a repository
 func initSubModules(repo *git.Repository, subApp *SubApplication) error {
 	logToMainFile(fmt.Sprintf("Initializing submodules for application: %s", subApp.Name))
 	w, err := repo.Worktree()
