@@ -8,8 +8,8 @@ import (
 	"syscall"
 )
 
-var serviceName = "MrG.AI.Daemon"
-var niceServiceName = "Mr.G AI Daemon"
+var serviceName = "MrG.Daemon"
+var niceServiceName = "Mr.G Daemon"
 
 func main() {
 
