@@ -16,6 +16,7 @@
         "path": "MrG.Comfy.UI",
         "autoUpdate": true,
         "flags": [
+            "--port 8181",
             "--cpu",
             "--windows-standalone-build",
             "--enable-cors-header"
