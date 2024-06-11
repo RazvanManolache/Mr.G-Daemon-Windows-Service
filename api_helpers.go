@@ -13,17 +13,17 @@ func makeError(msg string, err error) error {
 }
 
 func apiStatusInternal() (*DeamonStatus, error) {
-	defer broadcastToSocket("config", CurrentConfig)
-	defer broadcastToSocket("subapplications", subApplications)
+	go broadcastToSocket("config", CurrentConfig)
+	go broadcastToSocket("subapplications", subApplications)
+	go listDiskSpaceInternal()
 	go getAllKits()
+
 	state := DeamonStatus{Name: serviceName, Config: CurrentConfig, SubApplications: subApplications}
 
 	return &state, nil
 }
 
 func listDiskSpaceInternal() ([]DiskSpace, error) {
-	mu.Lock()
-	defer mu.Unlock()
 
 	// Get disk space
 	diskSpace, err := GetTotalDiskSpaceForAllDrives()

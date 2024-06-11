@@ -95,7 +95,7 @@ func (subApp *SubApplication) runSetupCommand() error {
 
 	joinedRest := strings.Join(commandParams[1:], " ")
 
-	cmd, err := subApp.createCommand(command)
+	cmd, err := subApp.createCommand(command, "Installing")
 	subApp.CancelContext = nil
 	subApp.Context = nil
 	subApp.Cmd = nil
@@ -120,7 +120,7 @@ func (subApp *SubApplication) runSetupCommand() error {
 }
 
 // createCommand creates a command for the subprocess
-func (subApp *SubApplication) createCommand(command string) (*exec.Cmd, error) {
+func (subApp *SubApplication) createCommand(command string, status string) (*exec.Cmd, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, command)
 	subApp.CancelContext = cancel
@@ -184,7 +184,7 @@ func (subApp *SubApplication) createCommand(command string) (*exec.Cmd, error) {
 		// }
 		scanner := bufio.NewScanner(stdoutReader)
 		for scanner.Scan() {
-			subApp.updateStatus("Running")
+			subApp.updateStatus(status)
 			logToFile("console", scanner.Text(), subApp)
 
 			if subApp.RestartOnCriticalError {
@@ -259,7 +259,7 @@ func (subAppDef *SubApplication) start() {
 	logToMainFile(fmt.Sprintf("	with params: %s", command))
 	logToMainFile(fmt.Sprintf("	in directory: %s", fullPath))
 
-	cmd, err := subApp.createCommand(subApp.CommandExec)
+	cmd, err := subApp.createCommand(subApp.CommandExec, "Running")
 	if err != nil {
 		logToFile("log", fmt.Sprintf("Error creating command for subapplication %s: %v", subApp.Name, err), subApp)
 		subApp.updateStatus("Failed")
