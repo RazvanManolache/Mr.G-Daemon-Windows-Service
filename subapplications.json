@@ -24,10 +24,9 @@
         "firstRun": false,
         "installed": true,
         "hasUpdates": false,
-        "logLocation": "c:\\Surse\\Mr.G\\Mr.G-Daemon-Windows-Service\\Logs\\19385028-8bd1-4a1e-bd95-43d9cb6d7db0",
         "setupCommand": "./python_embedded/python.exe -s -m pip install --upgrade torch torchvision torchaudio  --extra-index-url https://download.pytorch.org/whl/cu121 -r ./requirements.txt pygit2 --target ./python_embedded/Lib/site-packages",
-        "running": false,
-        "status": "Starting",
+        "running": true,
+        "status": "Running",
         "symLinks": {
             "ComfyUI\\models\\checkpoints": "StableDiffusion\\Checkpoints",
             "ComfyUI\\models\\clip": "StableDiffusion\\Clip",
@@ -45,5 +44,35 @@
             "ComfyUI\\models\\vae": "StableDiffusion\\Vae",
             "ComfyUI\\models\\vae_approx": "StableDiffusion\\VaeApprox"
         }
+    },
+    {
+        "id": "6ca2d7d1-ef1d-44cb-b993-437beaa20b26",
+        "name": "ComfyUI",
+        "commandExec": ".\\python_embedded\\python.exe",
+        "command": " -s .\\ComfyUI\\main.py",
+        "restartOnCriticalError": false,
+        "criticalErrorMessages": [
+            "CUDA error: unspecified launch failure",
+            "TORCH_USE_CUDA_DSA",
+            "CUDA_LAUNCH_BLOCKING"
+        ],
+        "autoStart": true,
+        "repoURL": "https://github.com/RazvanManolache/Mr.G-Kit-ComfyUI",
+        "branch": "main",
+        "path": "Comfy.UI",
+        "autoUpdate": true,
+        "flags": [
+            "--cpu",
+            "--windows-standalone-build",
+            "--enable-cors-header"
+        ],
+        "appType": "mrg",
+        "firstRun": false,
+        "installed": true,
+        "hasUpdates": false,
+        "setupCommand": "./python_embedded/python.exe -s -m pip install --upgrade torch torchvision torchaudio  --extra-index-url https://download.pytorch.org/whl/cu121 -r ./requirements.txt pygit2 --target ./python_embedded/Lib/site-packages",
+        "running": false,
+        "status": "Starting",
+        "symLinks": null
     }
 ]

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 // notifySubApplicationsStatusChange notifies all connected clients of the status of all subapplications
@@ -22,22 +23,40 @@ func getStatusOnlyArray(subApps []*SubApplication) []*SubApplicationStatus {
 }
 
 // readSubApplications reads the subapplications from the subApplicationFile
-func readSubApplications() []*SubApplication {
+func readSubApplications() ([]*SubApplication, error) {
 	var subApplications []*SubApplication
-	configFile, err := os.Open(subApplicationFile)
+
+	runningPath, err := getCurrentPath()
+	if err != nil {
+		logToMainFile(fmt.Sprintf("Error getting running path: %v", err))
+		return nil, err
+	}
+	fullPath := filepath.Join(runningPath, subApplicationFile)
+
+	configFile, err := os.Open(fullPath)
 
 	if err != nil {
 		logToMainFile(fmt.Sprintf("Error opening config file: %v", err))
+		return nil, err
 
 	} else {
 		err = json.NewDecoder(configFile).Decode(&subApplications)
 		if err != nil {
 			logToMainFile(fmt.Sprintf("Error decoding config file: %v", err))
+			return nil, err
 		}
 	}
 
 	defer configFile.Close()
-	return subApplications
+	return subApplications, nil
+}
+
+func autoStart() {
+	for _, subApp := range subApplications {
+		if subApp.AutoStart {
+			subApp.start()
+		}
+	}
 }
 
 // checkSubApplicationUpdatesInternal checks for updates to all subapplications
@@ -77,5 +96,6 @@ func saveSubApplications() {
 	if err != nil {
 		logToMainFile(fmt.Sprintf("Error encoding config file: %v", err))
 	}
+	broadcastToSocket("subapplications", subApplications)
 
 }

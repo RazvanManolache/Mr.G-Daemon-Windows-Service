@@ -20,11 +20,15 @@ type GitHubContent struct {
 // constructGitHubAPIURL constructs the URL for the GitHub API
 func constructGitHubAPIURL(repo string, path string) string {
 	parts := strings.Split(repo, "/")
-	if len(parts) != 2 {
-		logToMainFile("Invalid repository format. Use 'owner/repo'")
+
+	owner, repoName := parts[0], parts[1]
+	if len(parts) == 5 {
+		owner, repoName = parts[3], parts[4]
+	}
+	if len(parts) != 2 && len(parts) != 5 {
+		logToMainFile("Invalid repository format. Use 'owner/repo' or github link")
 		return ""
 	}
-	owner, repoName := parts[0], parts[1]
 	return fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s", owner, repoName, path)
 }
 
@@ -109,6 +113,10 @@ func getKitList(repoUrl string) []SubApplication {
 // install a subapplication
 func (subAppDef *SubApplication) install() bool {
 	subApp := subAppDef.getCurrent()
+	if subApp == nil {
+		return false
+	}
+	subApp.updateStatus("Installing")
 	logToMainFile(fmt.Sprintf("Installing subapplication: %s", subApp.Name))
 	installLoc, err := getInstallLocation(subApp)
 	if err != nil {
@@ -332,7 +340,11 @@ func stashChanges(repo *git.Repository) (int, error) {
 }
 
 func (subAppDef *SubApplication) uninstall() {
+	defer broadcastToSocket("kits", getAllKits())
 	subApp := subAppDef.getCurrent()
+	if subApp == nil {
+		return
+	}
 	logToMainFile(fmt.Sprintf("Uninstalling subapplication: %s", subApp.Name))
 	subApp.stop()
 	installLoc, err := getInstallLocation(subApp)
@@ -353,6 +365,9 @@ func (subAppDef *SubApplication) uninstall() {
 
 func (subAppDef *SubApplication) checkUpdates() bool {
 	subApp := subAppDef.getCurrent()
+	if subApp == nil {
+		return false
+	}
 	installLoc, err := getInstallLocation(subApp)
 	if err != nil {
 		logToFile("log", fmt.Sprintf("Failed to get install location for subapplication %s: %v", subApp.Name, err), nil)
@@ -402,6 +417,10 @@ func (subAppDef *SubApplication) checkUpdates() bool {
 
 func (subAppDef *SubApplication) update() bool {
 	subApp := subAppDef.getCurrent()
+	if subApp == nil {
+		return false
+	}
+	subApp.updateStatus("Updating")
 	logToMainFile(fmt.Sprintf("Updating subapplication: %s", subApp.Name))
 	installLoc, err := getInstallLocation(subApp)
 	if err != nil {

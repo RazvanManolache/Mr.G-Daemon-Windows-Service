@@ -2,18 +2,47 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+
+	"golang.org/x/sys/windows/svc"
 )
 
 var serviceName = "MrG.Daemon"
 var niceServiceName = "Mr.G Daemon"
 
 func main() {
+	isWinService, err := svc.IsWindowsService()
+	if err != nil {
+		log.Fatalf("failed to determine if we are running in an interactive session: %v", err)
+	}
+	if isWinService {
+		runService(serviceName, false)
+		return
+	}
 
-	runApplication()
+	if len(os.Args) > 1 {
+		cmd := os.Args[1]
+		switch cmd {
+		case "install":
+			installService(serviceName, niceServiceName)
+			return
+		case "remove":
+			removeService(serviceName)
+			return
+		case "start":
+			startService(serviceName)
+			return
+		case "stop":
+			stopService(serviceName)
+			return
+		}
+	}
+
+	runInteractive()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -40,21 +69,10 @@ func baseLoop(quit <-chan struct{}, done chan<- struct{}) {
 			}
 
 			switch commands[0] {
-			case "install":
-				installService(serviceName, niceServiceName)
-				return
-			case "remove":
-				removeService(serviceName)
-				return
-			case "start":
-				startService(serviceName)
-				return
+
 			case "stop":
-				stopService(serviceName)
-				return
-			case "stopservice":
 				softStopService()
-			case "restartservice":
+			case "restart":
 				restartService()
 			case "appinstall":
 				for _, subApp := range subApplications {

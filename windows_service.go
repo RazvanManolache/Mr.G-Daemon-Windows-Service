@@ -70,9 +70,10 @@ func runService(name string, isDebug bool) {
 }
 
 func (m *myService) runMainService(eventLog *eventlog.Log) {
-	go run()
+	run()
 	eventLog.Info(1, "Main service started")
 
 	<-m.quit
+	stopAllSubApplications()
 	close(m.done)
 }

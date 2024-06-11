@@ -3,8 +3,6 @@ package main
 import (
 	"log"
 	"os"
-
-	"golang.org/x/sys/windows/svc"
 )
 
 type myService struct {
@@ -12,40 +10,27 @@ type myService struct {
 	done chan struct{}
 }
 
-func runApplication() {
-	IsWindowsService, err := svc.IsWindowsService()
-	if err != nil {
-		log.Fatalf("failed to determine if we are running in an interactive session: %v", err)
-	}
-	if !IsWindowsService {
-		runInteractive()
-	} else {
-		runService(serviceName, false)
-	}
-}
-
 func run() {
+	var err error = nil
+	subApplications, err = readSubApplications()
+	if err != nil {
+		logToMainFile("Could not read configuration file for applications.")
+	}
+
 	go readConfigFile()
 	go startServer()
 
 	scheduler()
 	//detectGPU()
 	detectGPU_Windows()
-
-	subApplications = readSubApplications()
-
-	for _, subApp := range subApplications {
-		if subApp.AutoStart {
-			subApp.start()
-		}
-	}
+	autoStart()
 }
 
 func runInteractive() {
 	log.Print("Running in interactive mode")
 	service := newMyService()
-	go run()
-	go baseLoop(service.quit, service.done)
+	run()
+	baseLoop(service.quit, service.done)
 }
 
 var status_app string = "starting"

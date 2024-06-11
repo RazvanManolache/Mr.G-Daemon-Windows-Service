@@ -56,7 +56,7 @@ func startServer() error {
 	http.HandleFunc("/kits", listKits)
 	http.HandleFunc("/ws", wsHandler)
 	go broadcastMessages()
-	err := http.ListenAndServe(":8187", nil)
+	err := http.ListenAndServe(":8180", nil)
 	if err != nil {
 		return err
 	}
@@ -100,9 +100,9 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 		request := strings.ToLower(msg.Request)
 		switch request {
-		case "stopservice":
+		case "stop":
 			softStopService()
-		case "restartservice":
+		case "restart":
 			restartService()
 		case "config":
 			updateConfigFile(msg.Config)
@@ -180,8 +180,9 @@ func changeConfig(w http.ResponseWriter, r *http.Request) {
 		handleJsonAndError(w, CurrentConfig, nil)
 		return
 	}
-	config := updateConfigFile(data)
-	handleJsonAndError(w, config, nil)
+	config, err := updateConfigFile(data)
+
+	handleJsonAndError(w, config, err)
 
 }
 

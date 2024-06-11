@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 type Flag struct {
@@ -26,10 +27,18 @@ type FlagsAndGroups struct {
 	Groups map[string]Group `json:"groups"`
 }
 
-//read json file and return FlagsAndGroups struct
+// read json file and return FlagsAndGroups struct
 func readFlagsAndGroups(appType string) FlagsAndGroups {
 	var flagsAndGroups FlagsAndGroups
-	configFile, err := os.Open(appType + "Flags.json")
+
+	runningPath, err := getCurrentPath()
+	if err != nil {
+		logToMainFile(fmt.Sprintf("Error getting running path: %v", err))
+	}
+	flagFile := appType + "Flags.json"
+	fullPath := filepath.Join(runningPath, flagFile)
+
+	configFile, err := os.Open(fullPath)
 
 	if err != nil {
 		fmt.Printf("Error opening flags file: %v", err)

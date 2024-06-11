@@ -31,6 +31,7 @@ func installService(name, desc string) {
 
 	s, err = m.CreateService(name, exePath, mgr.Config{
 		DisplayName: desc,
+		Description: "Mr.G Daemon service, a service that allows you to run and control applications installed within it",
 		StartType:   mgr.StartAutomatic,
 	}, "is", "auto-started")
 	if err != nil {

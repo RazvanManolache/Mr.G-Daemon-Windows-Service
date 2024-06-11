@@ -31,7 +31,7 @@ type SubApplication struct {
 	FirstRun               bool               `json:"firstRun"`               // Indicates if the application is running for the first time
 	Installed              bool               `json:"installed"`              // Indicates if the application is installed
 	HasUpdates             bool               `json:"hasUpdates"`             // Indicates if the application has updates
-	LogLocation            string             `json:"logLocation"`            // Location of the log files
+	LogLocation            string             `json:"-"`                      // Location of the log files
 	SetupCommand           string             `json:"setupCommand"`           // Command to run after installation
 	LogFile                *os.File           `json:"-"`                      // Log file for the subprocess, don't serialize
 	Context                context.Context    `json:"-"`                      // Process object for the subprocess
@@ -43,8 +43,9 @@ type SubApplication struct {
 }
 
 type SubApplicationStatus struct {
-	Id     string `json:"id"`
-	Status string `json:"status"`
+	Id      string `json:"id"`
+	Status  string `json:"status"`
+	Running bool   `json:"running"`
 }
 
 var subApplications []*SubApplication
@@ -52,6 +53,11 @@ var subApplications []*SubApplication
 // updateStatus updates the status of the subprocess
 
 func (subApp *SubApplication) updateStatus(status string) {
+	if status == "Running" {
+		subApp.Running = true
+	} else {
+		subApp.Running = false
+	}
 	subApp.Status = status
 	notifySubApplicationsStatusChange()
 }
@@ -59,8 +65,9 @@ func (subApp *SubApplication) updateStatus(status string) {
 // getStatusOnly returns a SubApplicationStatus object with only the id and status
 func (subApp *SubApplication) getStatusOnly() *SubApplicationStatus {
 	return &SubApplicationStatus{
-		Id:     subApp.Id,
-		Status: subApp.Status,
+		Id:      subApp.Id,
+		Status:  subApp.Status,
+		Running: subApp.Running,
 	}
 }
 
@@ -207,6 +214,9 @@ func (subApp *SubApplication) createCommand(command string) (*exec.Cmd, error) {
 
 func (subAppDef *SubApplication) start() {
 	subApp := subAppDef.getCurrent()
+	if subApp == nil {
+		return
+	}
 
 	if subApp.AutoUpdate {
 		subApp.update()
@@ -275,14 +285,16 @@ func (subAppDef *SubApplication) start() {
 		return
 	}
 	subApp.updateStatus("Running")
-	subApp.Running = true
+
 	logToFile("log", "Subprocess started", subApp, true)
 
 }
 
 func (subAppDef *SubApplication) stop() {
 	subApp := subAppDef.getCurrent()
-
+	if subApp == nil {
+		return
+	}
 	if subApp.Context == nil || subApp.CancelContext == nil {
 		logToFile("log", "Subprocess is not running", subApp)
 		subApp.updateStatus("Stopped")
@@ -309,7 +321,6 @@ func (subAppDef *SubApplication) stop() {
 	subApp.Context = nil
 	subApp.Cmd = nil
 	subApp.CancelContext = nil
-	subApp.Running = false
 
 	logToFile("log", "Subprocess stopped", subApp)
 	subApp.updateStatus("Stopped")
@@ -318,6 +329,9 @@ func (subAppDef *SubApplication) stop() {
 // restart restarts the subprocess
 func (subAppDef *SubApplication) restart() {
 	subApp := subAppDef.getCurrent()
+	if subApp == nil {
+		return
+	}
 	subApp.updateStatus("Restarting")
 	subApp.stop()
 	time.Sleep(1 * time.Second)
@@ -332,7 +346,6 @@ func (subAppDef *SubApplication) getCurrent() *SubApplication {
 		}
 	}
 	return nil
-
 }
 
 // modify modifies the subprocess, restarting it if necessary
@@ -357,6 +370,7 @@ func (subApp *SubApplication) modify() *SubApplication {
 
 // add adds a subprocess to the list
 func (subApp *SubApplication) add() *SubApplication {
+	defer broadcastToSocket("kits", getAllKits())
 	defer listApplicationsInternal()
 	if subApp.Id == "" {
 		id, err := generateId()
@@ -376,6 +390,7 @@ func (subApp *SubApplication) add() *SubApplication {
 
 	subApplications = append(subApplications, subApp)
 	saveSubApplications()
+	subApp.install()
 	if subApp.AutoStart {
 		subApp.start()
 	}
@@ -385,6 +400,7 @@ func (subApp *SubApplication) add() *SubApplication {
 // remove removes a subprocess from the list
 
 func (subApp *SubApplication) remove() {
+	defer broadcastToSocket("kits", getAllKits())
 	for i, s := range subApplications {
 		if s.Id == subApp.Id {
 			if subApp.Running {
